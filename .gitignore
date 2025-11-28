@@ -1,4 +1,5 @@
-venv/
-build/
 
-.ninja_log
+**/venv/
+**/build/
+
+**/.ninja_log
