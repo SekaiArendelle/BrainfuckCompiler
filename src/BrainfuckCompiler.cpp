@@ -42,8 +42,6 @@
 
 #include "BrainfuckCompiler.h"
 
-using namespace llvm;
-
 BrainfuckCompiler::BrainfuckCompiler(size_t memorySize)
     : m_memorySize(memorySize),
       m_enableOptimization(true),
@@ -62,19 +60,19 @@ BrainfuckCompiler::~BrainfuckCompiler() {
 
 void BrainfuckCompiler::initializeLLVM() {
     // Initialize LLVM targets
-    InitializeAllTargetInfos();
-    InitializeAllTargets();
-    InitializeAllTargetMCs();
-    InitializeAllAsmParsers();
-    InitializeAllAsmPrinters();
+    llvm::InitializeAllTargetInfos();
+    llvm::InitializeAllTargets();
+    llvm::InitializeAllTargetMCs();
+    llvm::InitializeAllAsmParsers();
+    llvm::InitializeAllAsmPrinters();
 
     // Create LLVM context and module
-    m_context = std::make_unique<LLVMContext>();
-    m_module = std::make_unique<Module>("brainfuck_module", *m_context);
-    m_builder = std::make_unique<IRBuilder<>>(*m_context);
+    m_context = std::make_unique<llvm::LLVMContext>();
+    m_module = std::make_unique<llvm::Module>("brainfuck_module", *m_context);
+    m_builder = std::make_unique<llvm::IRBuilder<>>(*m_context);
 
     // Set target triple
-    auto targetTriple = sys::getDefaultTargetTriple();
+    auto targetTriple = llvm::sys::getDefaultTargetTriple();
     m_module->setTargetTriple(llvm::Triple(targetTriple));
 }
 
@@ -102,7 +100,7 @@ bool BrainfuckCompiler::compile(const std::string& source, const std::string& ou
         generateIR(source);
 
         // 验证IR
-        if (verifyModule(*m_module, &errs())) {
+        if (llvm::verifyModule(*m_module, &llvm::errs())) {
             reportError("Generated IR is invalid");
             return false;
         }
@@ -156,59 +154,59 @@ bool BrainfuckCompiler::checkBrackets(const std::string& source) {
 
 void BrainfuckCompiler::createMainFunction() {
     // Create main function: int main()
-    FunctionType* mainType = FunctionType::get(Type::getInt32Ty(*m_context), // Return type
+    llvm::FunctionType* mainType = llvm::FunctionType::get(llvm::Type::getInt32Ty(*m_context), // Return type
                                                false // Not variadic
     );
 
-    m_mainFunction = Function::Create(mainType, Function::ExternalLinkage, "main", m_module.get());
+    m_mainFunction = llvm::Function::Create(mainType, llvm::Function::ExternalLinkage, "main", m_module.get());
 
     // Create entry basic block
-    BasicBlock* entryBlock = BasicBlock::Create(*m_context, "entry", m_mainFunction);
+    llvm::BasicBlock* entryBlock = llvm::BasicBlock::Create(*m_context, "entry", m_mainFunction);
 
     m_builder->SetInsertPoint(entryBlock);
 }
 
 void BrainfuckCompiler::allocateMemory() {
     // Allocate memory array: int8_t memory[memorySize]
-    ArrayType* memoryArrayType = ArrayType::get(Type::getInt8Ty(*m_context), m_memorySize);
+    llvm::ArrayType* memoryArrayType = llvm::ArrayType::get(llvm::Type::getInt8Ty(*m_context), m_memorySize);
 
     m_memoryArray = m_builder->CreateAlloca(memoryArrayType, nullptr, "memory");
 
     // Initialize memory to 0
-    Value* zero = ConstantInt::get(Type::getInt8Ty(*m_context), 0);
+    llvm::Value* zero = llvm::ConstantInt::get(llvm::Type::getInt8Ty(*m_context), 0);
 
     // Use memset to initialize memory
-    Function* memsetFunc = Intrinsic::getOrInsertDeclaration(m_module.get(), Intrinsic::memset,
-                                                             {m_memoryArray->getType(), Type::getInt8Ty(*m_context)});
+    llvm::Function* memsetFunc = llvm::Intrinsic::getOrInsertDeclaration(m_module.get(), llvm::Intrinsic::memset,
+                                                             {m_memoryArray->getType(), llvm::Type::getInt8Ty(*m_context)});
 
-    Value* size = ConstantInt::get(Type::getInt64Ty(*m_context), m_memorySize);
-    Value* volatileFlag = ConstantInt::get(Type::getInt1Ty(*m_context), false);
+    llvm::Value* size = llvm::ConstantInt::get(llvm::Type::getInt64Ty(*m_context), m_memorySize);
+    llvm::Value* volatileFlag = llvm::ConstantInt::get(llvm::Type::getInt1Ty(*m_context), false);
 
     m_builder->CreateCall(
-        memsetFunc, {m_builder->CreateBitCast(m_memoryArray, Type::getInt8Ty(*m_context)), zero, size, volatileFlag});
+        memsetFunc, {m_builder->CreateBitCast(m_memoryArray, llvm::Type::getInt8Ty(*m_context)), zero, size, volatileFlag});
 
     // Allocate data pointer: int8_t* dataPtr = &memory[memorySize/2]
-    m_dataPtr = m_builder->CreateAlloca(Type::getInt8Ty(*m_context), nullptr, "dataptr");
+    m_dataPtr = m_builder->CreateAlloca(llvm::Type::getInt8Ty(*m_context), nullptr, "dataptr");
 
     // Initialize pointer to middle of memory
-    Value* indices[] = {ConstantInt::get(Type::getInt32Ty(*m_context), 0),
-                        ConstantInt::get(Type::getInt32Ty(*m_context), m_memorySize / 2)};
+    llvm::Value* indices[] = {llvm::ConstantInt::get(llvm::Type::getInt32Ty(*m_context), 0),
+                        llvm::ConstantInt::get(llvm::Type::getInt32Ty(*m_context), m_memorySize / 2)};
 
-    Value* initialPtr = m_builder->CreateInBoundsGEP(m_builder->getInt8Ty(), m_memoryArray, indices, "initial_ptr");
+    llvm::Value* initialPtr = m_builder->CreateInBoundsGEP(m_builder->getInt8Ty(), m_memoryArray, indices, "initial_ptr");
 
     m_builder->CreateStore(initialPtr, m_dataPtr);
 }
 
 void BrainfuckCompiler::setupRuntimeFunctions() {
     // Create putchar function declaration: int putchar(int)
-    FunctionType* putcharType = FunctionType::get(Type::getInt32Ty(*m_context), {Type::getInt32Ty(*m_context)}, false);
+    llvm::FunctionType* putcharType = llvm::FunctionType::get(llvm::Type::getInt32Ty(*m_context), {llvm::Type::getInt32Ty(*m_context)}, false);
 
-    m_putcharFunc = Function::Create(putcharType, Function::ExternalLinkage, "putchar", m_module.get());
+    m_putcharFunc = llvm::Function::Create(putcharType, llvm::Function::ExternalLinkage, "putchar", m_module.get());
 
     // Create getchar function declaration: int getchar()
-    FunctionType* getcharType = FunctionType::get(Type::getInt32Ty(*m_context), false);
+    llvm::FunctionType* getcharType = llvm::FunctionType::get(llvm::Type::getInt32Ty(*m_context), false);
 
-    m_getcharFunc = Function::Create(getcharType, Function::ExternalLinkage, "getchar", m_module.get());
+    m_getcharFunc = llvm::Function::Create(getcharType, llvm::Function::ExternalLinkage, "getchar", m_module.get());
 }
 
 void BrainfuckCompiler::generateIR(const std::string& source) {
@@ -256,16 +254,16 @@ void BrainfuckCompiler::generateIR(const std::string& source) {
     }
 
     // Create return instruction
-    Value* retValue = ConstantInt::get(Type::getInt32Ty(*m_context), 0);
+    llvm::Value* retValue = llvm::ConstantInt::get(llvm::Type::getInt32Ty(*m_context), 0);
     m_builder->CreateRet(retValue);
 }
 
 void BrainfuckCompiler::handleIncrementPtr() {
     // Load current pointer value
-    Value* currentPtr = m_builder->CreateLoad(Type::getInt8Ty(m_builder->getContext()), m_dataPtr, "current_ptr");
+    llvm::Value* currentPtr = m_builder->CreateLoad(llvm::Type::getInt8Ty(m_builder->getContext()), m_dataPtr, "current_ptr");
 
     // Pointer increment
-    Value* newPtr = m_builder->CreateConstGEP1_32(Type::getInt8Ty(*m_context), currentPtr, 1, "ptr_inc");
+    llvm::Value* newPtr = m_builder->CreateConstGEP1_32(llvm::Type::getInt8Ty(*m_context), currentPtr, 1, "ptr_inc");
 
     // Store new pointer value
     m_builder->CreateStore(newPtr, m_dataPtr);
@@ -273,10 +271,10 @@ void BrainfuckCompiler::handleIncrementPtr() {
 
 void BrainfuckCompiler::handleDecrementPtr() {
     // Load current pointer value
-    Value* currentPtr = m_builder->CreateLoad(Type::getInt8Ty(m_builder->getContext()), m_dataPtr, "current_ptr");
+    llvm::Value* currentPtr = m_builder->CreateLoad(llvm::Type::getInt8Ty(m_builder->getContext()), m_dataPtr, "current_ptr");
 
     // Pointer decrement
-    Value* newPtr = m_builder->CreateConstGEP1_32(Type::getInt8Ty(*m_context), currentPtr, -1, "ptr_dec");
+    llvm::Value* newPtr = m_builder->CreateConstGEP1_32(llvm::Type::getInt8Ty(*m_context), currentPtr, -1, "ptr_dec");
 
     // Store new pointer value
     m_builder->CreateStore(newPtr, m_dataPtr);
@@ -284,13 +282,13 @@ void BrainfuckCompiler::handleDecrementPtr() {
 
 void BrainfuckCompiler::handleIncrementByte() {
     // Load current pointer
-    Value* currentPtr = m_builder->CreateLoad(Type::getInt8Ty(m_builder->getContext()), m_dataPtr, "current_ptr");
+    llvm::Value* currentPtr = m_builder->CreateLoad(llvm::Type::getInt8Ty(m_builder->getContext()), m_dataPtr, "current_ptr");
 
     // Load current byte value
-    Value* currentValue = m_builder->CreateLoad(Type::getInt8Ty(m_builder->getContext()), currentPtr, "current_val");
+    llvm::Value* currentValue = m_builder->CreateLoad(llvm::Type::getInt8Ty(m_builder->getContext()), currentPtr, "current_val");
 
     // Byte value increment (8-bit unsigned addition)
-    Value* newValue = m_builder->CreateAdd(currentValue, ConstantInt::get(Type::getInt8Ty(*m_context), 1), "val_inc",
+    llvm::Value* newValue = m_builder->CreateAdd(currentValue, llvm::ConstantInt::get(llvm::Type::getInt8Ty(*m_context), 1), "val_inc",
                                            true, // Signed overflow
                                            true // Unsigned overflow
     );
@@ -301,13 +299,13 @@ void BrainfuckCompiler::handleIncrementByte() {
 
 void BrainfuckCompiler::handleDecrementByte() {
     // Load current pointer
-    Value* currentPtr = m_builder->CreateLoad(Type::getInt8Ty(m_builder->getContext()), m_dataPtr, "current_ptr");
+    llvm::Value* currentPtr = m_builder->CreateLoad(llvm::Type::getInt8Ty(m_builder->getContext()), m_dataPtr, "current_ptr");
 
     // Load current byte value
-    Value* currentValue = m_builder->CreateLoad(Type::getInt8Ty(m_builder->getContext()), currentPtr, "current_val");
+    llvm::Value* currentValue = m_builder->CreateLoad(llvm::Type::getInt8Ty(m_builder->getContext()), currentPtr, "current_val");
 
     // Byte value decrement (8-bit unsigned subtraction)
-    Value* newValue = m_builder->CreateSub(currentValue, ConstantInt::get(Type::getInt8Ty(*m_context), 1), "val_dec",
+    llvm::Value* newValue = m_builder->CreateSub(currentValue, llvm::ConstantInt::get(llvm::Type::getInt8Ty(*m_context), 1), "val_dec",
                                            true, // Signed overflow
                                            true // Unsigned overflow
     );
@@ -318,13 +316,13 @@ void BrainfuckCompiler::handleDecrementByte() {
 
 void BrainfuckCompiler::handleOutput() {
     // Load current pointer
-    Value* currentPtr = m_builder->CreateLoad(Type::getInt8Ty(m_builder->getContext()), m_dataPtr, "current_ptr");
+    llvm::Value* currentPtr = m_builder->CreateLoad(llvm::Type::getInt8Ty(m_builder->getContext()), m_dataPtr, "current_ptr");
 
     // Load current byte value
-    Value* currentValue = m_builder->CreateLoad(Type::getInt8Ty(m_builder->getContext()), currentPtr, "output_val");
+    llvm::Value* currentValue = m_builder->CreateLoad(llvm::Type::getInt8Ty(m_builder->getContext()), currentPtr, "output_val");
 
     // Zero extend to 32-bit (putchar needs int parameter)
-    Value* extendedValue = m_builder->CreateZExt(currentValue, Type::getInt32Ty(*m_context), "output_int");
+    llvm::Value* extendedValue = m_builder->CreateZExt(currentValue, llvm::Type::getInt32Ty(*m_context), "output_int");
 
     // Call putchar
     m_builder->CreateCall(m_putcharFunc, {extendedValue});
@@ -332,13 +330,13 @@ void BrainfuckCompiler::handleOutput() {
 
 void BrainfuckCompiler::handleInput() {
     // Call getchar
-    Value* inputValue = m_builder->CreateCall(m_getcharFunc, {}, "input_char");
+    llvm::Value* inputValue = m_builder->CreateCall(m_getcharFunc, {}, "input_char");
 
     // Truncate to 8-bit
-    Value* truncatedValue = m_builder->CreateTrunc(inputValue, Type::getInt8Ty(*m_context), "input_byte");
+    llvm::Value* truncatedValue = m_builder->CreateTrunc(inputValue, llvm::Type::getInt8Ty(*m_context), "input_byte");
 
     // Load current pointer
-    Value* currentPtr = m_builder->CreateLoad(Type::getInt8Ty(m_builder->getContext()), m_dataPtr, "current_ptr");
+    llvm::Value* currentPtr = m_builder->CreateLoad(llvm::Type::getInt8Ty(m_builder->getContext()), m_dataPtr, "current_ptr");
 
     // Store input value
     m_builder->CreateStore(truncatedValue, currentPtr);
@@ -346,11 +344,11 @@ void BrainfuckCompiler::handleInput() {
 
 void BrainfuckCompiler::handleLoopStart(size_t ip) {
     // Create loop basic blocks
-    BasicBlock* loopHeader = BasicBlock::Create(*m_context, "loop_header_" + std::to_string(ip), m_mainFunction);
+    llvm::BasicBlock* loopHeader = llvm::BasicBlock::Create(*m_context, "loop_header_" + std::to_string(ip), m_mainFunction);
 
-    BasicBlock* loopBody = BasicBlock::Create(*m_context, "loop_body_" + std::to_string(ip), m_mainFunction);
+    llvm::BasicBlock* loopBody = llvm::BasicBlock::Create(*m_context, "loop_body_" + std::to_string(ip), m_mainFunction);
 
-    BasicBlock* loopEnd = BasicBlock::Create(*m_context, "loop_end_" + std::to_string(ip), m_mainFunction);
+    llvm::BasicBlock* loopEnd = llvm::BasicBlock::Create(*m_context, "loop_end_" + std::to_string(ip), m_mainFunction);
 
     // Jump to loop header
     m_builder->CreateBr(loopHeader);
@@ -359,12 +357,12 @@ void BrainfuckCompiler::handleLoopStart(size_t ip) {
     m_builder->SetInsertPoint(loopHeader);
 
     // Load current byte value
-    Value* currentPtr = m_builder->CreateLoad(Type::getInt8Ty(m_builder->getContext()), m_dataPtr, "current_ptr");
-    Value* currentValue = m_builder->CreateLoad(Type::getInt8Ty(m_builder->getContext()), currentPtr, "loop_val");
+    llvm::Value* currentPtr = m_builder->CreateLoad(llvm::Type::getInt8Ty(m_builder->getContext()), m_dataPtr, "current_ptr");
+    llvm::Value* currentValue = m_builder->CreateLoad(llvm::Type::getInt8Ty(m_builder->getContext()), currentPtr, "loop_val");
 
     // Compare value to 0
-    Value* zero = ConstantInt::get(Type::getInt8Ty(*m_context), 0);
-    Value* condition = m_builder->CreateICmpEQ(currentValue, zero, "loop_cond");
+    llvm::Value* zero = llvm::ConstantInt::get(llvm::Type::getInt8Ty(*m_context), 0);
+    llvm::Value* condition = m_builder->CreateICmpEQ(currentValue, zero, "loop_cond");
 
     // Conditional branch
     m_builder->CreateCondBr(condition, loopEnd, loopBody);
@@ -384,8 +382,8 @@ void BrainfuckCompiler::handleLoopEnd(size_t ip) {
     }
 
     // Get loop basic blocks
-    BasicBlock* loopHeader = m_loopStartBlocks.top();
-    BasicBlock* loopEnd = m_loopEndBlocks.top();
+    llvm::BasicBlock* loopHeader = m_loopStartBlocks.top();
+    llvm::BasicBlock* loopEnd = m_loopEndBlocks.top();
 
     // Pop from loop stack
     m_loopStartBlocks.pop();
@@ -400,13 +398,13 @@ void BrainfuckCompiler::handleLoopEnd(size_t ip) {
 
 void BrainfuckCompiler::optimizeModule() {
     // Create optimization pass manager
-    legacy::PassManager pm;
+    llvm::legacy::PassManager pm;
 
     // Add optimization passes
-    pm.add(createInstructionCombiningPass());
-    pm.add(createReassociatePass());
-    pm.add(createGVNPass());
-    pm.add(createCFGSimplificationPass());
+    pm.add(llvm::createInstructionCombiningPass());
+    pm.add(llvm::createReassociatePass());
+    pm.add(llvm::createGVNPass());
+    pm.add(llvm::createCFGSimplificationPass());
 
     // Run optimization
     pm.run(*m_module);
@@ -415,7 +413,7 @@ void BrainfuckCompiler::optimizeModule() {
 void BrainfuckCompiler::emitObjectFile(const std::string& outputFile) {
     // Get target machine
     std::string error;
-    auto target = TargetRegistry::lookupTarget(m_module->getTargetTriple(), error);
+    auto target = llvm::TargetRegistry::lookupTarget(m_module->getTargetTriple(), error);
 
     if (!target) {
         reportError("Target lookup failed: " + error);
@@ -423,9 +421,9 @@ void BrainfuckCompiler::emitObjectFile(const std::string& outputFile) {
     }
 
     // Target machine options
-    TargetOptions options;
+    llvm::TargetOptions options;
     auto targetMachine =
-        target->createTargetMachine(m_module->getTargetTriple(), "generic", "", options, std::optional<Reloc::Model>());
+        target->createTargetMachine(m_module->getTargetTriple(), "generic", "", options, std::optional<llvm::Reloc::Model>());
 
     // Set data layout
     m_module->setDataLayout(targetMachine->createDataLayout());
@@ -436,7 +434,7 @@ void BrainfuckCompiler::emitObjectFile(const std::string& outputFile) {
 
     // 生成目标文件
     std::error_code ec;
-    raw_fd_ostream dest(objectFile, ec, sys::fs::OF_None);
+    llvm::raw_fd_ostream dest(objectFile, ec, llvm::sys::fs::OF_None);
 
     if (ec) {
         reportError("Cannot open output file: " + ec.message());
@@ -444,7 +442,7 @@ void BrainfuckCompiler::emitObjectFile(const std::string& outputFile) {
     }
 
     // Create pass manager
-    legacy::PassManager pass;
+    llvm::legacy::PassManager pass;
 
     // Add object file generation pass
     if (targetMachine->addPassesToEmitFile(pass, dest, nullptr, llvm::CodeGenFileType::ObjectFile)) {
@@ -474,7 +472,7 @@ void BrainfuckCompiler::emitObjectFile(const std::string& outputFile) {
 void BrainfuckCompiler::executeJIT() {
     // Create JIT execution engine
     std::string error;
-    ExecutionEngine* ee = EngineBuilder(std::move(m_module)).setErrorStr(&error).create();
+    llvm::ExecutionEngine* ee = llvm::EngineBuilder(std::move(m_module)).setErrorStr(&error).create();
 
     if (!ee) {
         reportError("JIT engine creation failed: " + error);
@@ -482,8 +480,8 @@ void BrainfuckCompiler::executeJIT() {
     }
 
     // Execute main function
-    std::vector<GenericValue> noargs;
-    GenericValue result = ee->runFunction(m_mainFunction, noargs);
+    std::vector<llvm::GenericValue> noargs;
+    llvm::GenericValue result = ee->runFunction(m_mainFunction, noargs);
 
     std::cout << "JIT execution completed, return value: " << result.IntVal.getZExtValue() << std::endl;
 
@@ -492,14 +490,14 @@ void BrainfuckCompiler::executeJIT() {
 
 void BrainfuckCompiler::createDebugInfo() {
     // Create debug information builder
-    m_diBuilder = std::make_unique<DIBuilder>(*m_module);
+    m_diBuilder = std::make_unique<llvm::DIBuilder>(*m_module);
 
     // Create compilation unit
-    DIFile* file = m_diBuilder->createFile("brainfuck.bf", "/tmp");
+    llvm::DIFile* file = m_diBuilder->createFile("brainfuck.bf", "/tmp");
 
     // Create subroutine (main function)
-    DISubprogram* sp =
-        m_diBuilder->createFunction(file, "main", StringRef(), file, 1,
+    llvm::DISubprogram* sp =
+        m_diBuilder->createFunction(file, "main", llvm::StringRef(), file, 1,
                                     m_diBuilder->createSubroutineType(m_diBuilder->getOrCreateTypeArray({})), false);
 
     m_mainFunction->setSubprogram(sp);
