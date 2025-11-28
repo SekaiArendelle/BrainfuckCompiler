@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
-project(BrainfuckCompiler VERSION 1.0.0 LANGUAGES CXX)
+project(BrainfuckCompiler VERSION 1.0.0 LANGUAGES C CXX)
 
 # 设置C++标准
 set(CMAKE_CXX_STANDARD 17)
@@ -12,7 +12,7 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 
 # 查找LLVM包
-find_package(LLVM 14 REQUIRED CONFIG)
+find_package(LLVM REQUIRED CONFIG)
 
 # 打印LLVM信息
 message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
@@ -40,25 +40,7 @@ set(SOURCES
 # 创建可执行文件
 add_executable(bfc ${SOURCES})
 
-# 链接LLVM库
-llvm_map_components_to_libnames(llvm_libs 
-    Core 
-    ExecutionEngine 
-    Interpreter 
-    MCJIT 
-    OrcJIT
-    Support 
-    native 
-    IRReader 
-    Object 
-    BitWriter 
-    TransformUtils 
-    Scalar 
-    InstCombine 
-    Analysis
-)
-
-target_link_libraries(bfc ${llvm_libs})
+target_link_libraries(bfc LLVM)
 
 # 设置编译器标志
 target_compile_features(bfc PRIVATE cxx_std_17)
@@ -96,6 +78,6 @@ set(CPACK_PACKAGE_NAME "BrainfuckCompiler")
 set(CPACK_PACKAGE_VERSION ${PROJECT_VERSION})
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Brainfuck to LLVM Compiler")
 set(CPACK_PACKAGE_VENDOR "LLVM Brainfuck Compiler")
-set(CPACK_DEBIAN_PACKAGE_DEPENDS "libc6, libgcc-s1, libstdc++6, llvm-14")
+#set(CPACK_DEBIAN_PACKAGE_DEPENDS "libc6, libgcc-s1, libstdc++6, llvm-14")
 
 include(CPack)

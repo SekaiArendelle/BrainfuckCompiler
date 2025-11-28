@@ -6,18 +6,12 @@
 #include <vector>
 #include <stack>
 #include <map>
-
-// Forward declarations for LLVM types
-namespace llvm {
-    class LLVMContext;
-    class Module;
-    class IRBuilder;
-    class Value;
-    class Function;
-    class BasicBlock;
-    class AllocaInst;
-    class DIBuilder;
-}
+#include <llvm/IR/IRBuilder.h>
+#include <llvm/IR/DIBuilder.h>
+#include <llvm/IR/LLVMContext.h>
+#include <llvm/IR/Module.h>
+#include <llvm/IR/Function.h>
+#include <llvm/IR/BasicBlock.h>
 
 /**
  * @class BrainfuckCompiler

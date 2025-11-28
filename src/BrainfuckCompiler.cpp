@@ -1,4 +1,4 @@
-#include "BrainfuckCompiler.h"
+#include <optional>
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -6,38 +6,41 @@
 #include <cctype>
 
 // LLVM headers
-#include "llvm/ADT/APInt.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/IR/BasicBlock.h"
-#include "llvm/IR/Constants.h"
-#include "llvm/IR/DerivedTypes.h"
-#include "llvm/IR/Function.h"
-#include "llvm/IR/IRBuilder.h"
-#include "llvm/IR/Instructions.h"
-#include "llvm/IR/LLVMContext.h"
-#include "llvm/IR/LegacyPassManager.h"
-#include "llvm/IR/Module.h"
-#include "llvm/IR/Type.h"
-#include "llvm/IR/Verifier.h"
-#include "llvm/Support/FileSystem.h"
-#include "llvm/Support/Host.h"
-#include "llvm/Support/TargetRegistry.h"
-#include "llvm/Support/TargetSelect.h"
-#include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetMachine.h"
-#include "llvm/Target/TargetOptions.h"
-#include "llvm/Transforms/InstCombine/InstCombine.h"
-#include "llvm/Transforms/Scalar.h"
-#include "llvm/Transforms/Scalar/GVN.h"
+#include <llvm/ADT/APInt.h>
+#include <llvm/ADT/STLExtras.h>
+#include <llvm/IR/BasicBlock.h>
+#include <llvm/IR/Constants.h>
+#include <llvm/IR/DerivedTypes.h>
+#include <llvm/IR/Function.h>
+#include <llvm/IR/IRBuilder.h>
+#include <llvm/IR/Instructions.h>
+#include <llvm/IR/LLVMContext.h>
+#include <llvm/IR/LegacyPassManager.h>
+#include <llvm/IR/Module.h>
+#include <llvm/IR/Type.h>
+#include <llvm/IR/Verifier.h>
+#include <llvm/Support/FileSystem.h>
+#include <llvm/TargetParser/Host.h>
+#include <llvm/TargetParser/Triple.h>
+#include <llvm/MC/TargetRegistry.h>
+#include <llvm/Support/TargetSelect.h>
+#include <llvm/Support/raw_ostream.h>
+#include <llvm/Target/TargetMachine.h>
+#include <llvm/Target/TargetOptions.h>
+#include <llvm/Transforms/InstCombine/InstCombine.h>
+#include <llvm/Transforms/Scalar.h>
+#include <llvm/Transforms/Scalar/GVN.h>
 
 // MCJIT headers
-#include "llvm/ExecutionEngine/MCJIT.h"
-#include "llvm/ExecutionEngine/ExecutionEngine.h"
-#include "llvm/ExecutionEngine/GenericValue.h"
+#include <llvm/ExecutionEngine/MCJIT.h>
+#include <llvm/ExecutionEngine/ExecutionEngine.h>
+#include <llvm/ExecutionEngine/GenericValue.h>
 
 // Debug info headers
-#include "llvm/IR/DIBuilder.h"
-#include "llvm/IR/DebugInfo.h"
+#include <llvm/IR/DIBuilder.h>
+#include <llvm/IR/DebugInfo.h>
+
+#include "BrainfuckCompiler.h"
 
 using namespace llvm;
 
@@ -73,7 +76,7 @@ void BrainfuckCompiler::initializeLLVM() {
     
     // 设置目标三元组
     auto targetTriple = sys::getDefaultTargetTriple();
-    m_module->setTargetTriple(targetTriple);
+    m_module->setTargetTriple(llvm::Triple(targetTriple));
 }
 
 bool BrainfuckCompiler::compile(const std::string& source, const std::string& outputFile, bool enableJIT) {
@@ -203,7 +206,7 @@ void BrainfuckCompiler::allocateMemory() {
     Value* volatileFlag = ConstantInt::get(Type::getInt1Ty(*m_context), false);
     
     m_builder->CreateCall(memsetFunc, {
-        m_builder->CreateBitCast(m_memoryArray, Type::getInt8PtrTy(*m_context)),
+        m_builder->CreateBitCast(m_memoryArray, Type::getInt8Ty(*m_context)),
         zero,
         size,
         volatileFlag
@@ -211,7 +214,7 @@ void BrainfuckCompiler::allocateMemory() {
     
     // 分配数据指针: int8_t* dataPtr = &memory[memorySize/2]
     m_dataPtr = m_builder->CreateAlloca(
-        Type::getInt8PtrTy(*m_context),
+        Type::getInt8Ty(*m_context),
         nullptr,
         "dataptr"
     );
@@ -223,6 +226,7 @@ void BrainfuckCompiler::allocateMemory() {
     };
     
     Value* initialPtr = m_builder->CreateInBoundsGEP(
+        m_builder->getInt8Ty(),
         m_memoryArray,
         indices,
         "initial_ptr"
@@ -312,7 +316,7 @@ void BrainfuckCompiler::generateIR(const std::string& source) {
 
 void BrainfuckCompiler::handleIncrementPtr() {
     // 加载当前指针值
-    Value* currentPtr = m_builder->CreateLoad(m_dataPtr, "current_ptr");
+    Value* currentPtr = m_builder->CreateLoad(Type::getInt8Ty(m_builder->getContext()), m_dataPtr, "current_ptr");
     
     // 指针递增
     Value* newPtr = m_builder->CreateConstGEP1_32(
@@ -328,7 +332,7 @@ void BrainfuckCompiler::handleIncrementPtr() {
 
 void BrainfuckCompiler::handleDecrementPtr() {
     // 加载当前指针值
-    Value* currentPtr = m_builder->CreateLoad(m_dataPtr, "current_ptr");
+    Value* currentPtr = m_builder->CreateLoad(Type::getInt8Ty(m_builder->getContext()), m_dataPtr, "current_ptr");
     
     // 指针递减
     Value* newPtr = m_builder->CreateConstGEP1_32(
@@ -344,10 +348,10 @@ void BrainfuckCompiler::handleDecrementPtr() {
 
 void BrainfuckCompiler::handleIncrementByte() {
     // 加载当前指针
-    Value* currentPtr = m_builder->CreateLoad(m_dataPtr, "current_ptr");
+    Value* currentPtr = m_builder->CreateLoad(Type::getInt8Ty(m_builder->getContext()), m_dataPtr, "current_ptr");
     
     // 加载当前字节值
-    Value* currentValue = m_builder->CreateLoad(currentPtr, "current_val");
+    Value* currentValue = m_builder->CreateLoad(Type::getInt8Ty(m_builder->getContext()), currentPtr, "current_val");
     
     // 字节值递增（8位无符号加法）
     Value* newValue = m_builder->CreateAdd(
@@ -364,10 +368,10 @@ void BrainfuckCompiler::handleIncrementByte() {
 
 void BrainfuckCompiler::handleDecrementByte() {
     // 加载当前指针
-    Value* currentPtr = m_builder->CreateLoad(m_dataPtr, "current_ptr");
+    Value* currentPtr = m_builder->CreateLoad(Type::getInt8Ty(m_builder->getContext()), m_dataPtr, "current_ptr");
     
     // 加载当前字节值
-    Value* currentValue = m_builder->CreateLoad(currentPtr, "current_val");
+    Value* currentValue = m_builder->CreateLoad(Type::getInt8Ty(m_builder->getContext()), currentPtr, "current_val");
     
     // 字节值递减（8位无符号减法）
     Value* newValue = m_builder->CreateSub(
@@ -384,10 +388,10 @@ void BrainfuckCompiler::handleDecrementByte() {
 
 void BrainfuckCompiler::handleOutput() {
     // 加载当前指针
-    Value* currentPtr = m_builder->CreateLoad(m_dataPtr, "current_ptr");
+    Value* currentPtr = m_builder->CreateLoad(Type::getInt8Ty(m_builder->getContext()), m_dataPtr, "current_ptr");
     
     // 加载当前字节值
-    Value* currentValue = m_builder->CreateLoad(currentPtr, "output_val");
+    Value* currentValue = m_builder->CreateLoad(Type::getInt8Ty(m_builder->getContext()), currentPtr, "output_val");
     
     // 零扩展到32位（putchar需要int参数）
     Value* extendedValue = m_builder->CreateZExt(
@@ -412,7 +416,7 @@ void BrainfuckCompiler::handleInput() {
     );
     
     // 加载当前指针
-    Value* currentPtr = m_builder->CreateLoad(m_dataPtr, "current_ptr");
+    Value* currentPtr = m_builder->CreateLoad(Type::getInt8Ty(m_builder->getContext()), m_dataPtr, "current_ptr");
     
     // 存储输入值
     m_builder->CreateStore(truncatedValue, currentPtr);
@@ -445,8 +449,8 @@ void BrainfuckCompiler::handleLoopStart(size_t ip) {
     m_builder->SetInsertPoint(loopHeader);
     
     // 加载当前字节值
-    Value* currentPtr = m_builder->CreateLoad(m_dataPtr, "current_ptr");
-    Value* currentValue = m_builder->CreateLoad(currentPtr, "loop_val");
+    Value* currentPtr = m_builder->CreateLoad(Type::getInt8Ty(m_builder->getContext()), m_dataPtr, "current_ptr");
+    Value* currentValue = m_builder->CreateLoad(Type::getInt8Ty(m_builder->getContext()), currentPtr, "loop_val");
     
     // 比较值是否为0
     Value* zero = ConstantInt::get(Type::getInt8Ty(*m_context), 0);
@@ -515,7 +519,7 @@ void BrainfuckCompiler::emitObjectFile(const std::string& outputFile) {
         "generic",
         "",
         options,
-        Optional<Reloc::Model>()
+        std::optional<Reloc::Model>()
     );
     
     // 设置数据布局
@@ -538,7 +542,7 @@ void BrainfuckCompiler::emitObjectFile(const std::string& outputFile) {
     legacy::PassManager pass;
     
     // 添加目标文件生成pass
-    if (targetMachine->addPassesToEmitFile(pass, dest, nullptr, CGFT_ObjectFile)) {
+    if (targetMachine->addPassesToEmitFile(pass, dest, nullptr, llvm::CodeGenFileType::ObjectFile)) {
         reportError("目标机器不支持目标文件生成");
         return;
     }
@@ -578,7 +582,7 @@ void BrainfuckCompiler::executeJIT() {
     std::vector<GenericValue> noargs;
     GenericValue result = ee->runFunction(m_mainFunction, noargs);
     
-    std::cout << "JIT执行完成，返回值: " << result.IntVal << std::endl;
+    std::cout << "JIT执行完成，返回值: " << result.IntVal.getZExtValue() << std::endl;
     
     delete ee;
 }
@@ -605,12 +609,12 @@ void BrainfuckCompiler::createDebugInfo() {
         StringRef(),
         file,
         1,
-        m_diBuilder->createSubroutineType(m_diBuilder->getOrCreateTypeArray(None)),
-        false,
-        true,
-        0,
-        DINode::FlagPrototyped,
+        m_diBuilder->createSubroutineType(m_diBuilder->getOrCreateTypeArray(std::nullopt)),
         false
+        // DINode::FlagZero,
+        // 0,
+        // DINode::FlagPrototyped,
+        // false
     );
     
     m_mainFunction->setSubprogram(sp);
