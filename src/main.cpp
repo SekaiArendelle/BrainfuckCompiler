@@ -7,35 +7,35 @@
 #include "BrainfuckCompiler.h"
 
 /**
- * @brief 显示使用帮助
+ * @brief Display usage help
  */
 void showUsage(const char* programName) {
-    std::cout << "Brainfuck LLVM 编译器" << std::endl;
-    std::cout << "用法: " << programName << " [选项]" << std::endl;
+    std::cout << "Brainfuck LLVM Compiler" << std::endl;
+    std::cout << "Usage: " << programName << " [options]" << std::endl;
     std::cout << std::endl;
-    std::cout << "选项:" << std::endl;
-    std::cout << "  -i, --input <文件>     输入Brainfuck源文件" << std::endl;
-    std::cout << "  -o, --output <文件>    输出可执行文件名" << std::endl;
-    std::cout << "  -m, --memory <大小>    内存大小（默认: 30000）" << std::endl;
-    std::cout << "  -O, --optimize         启用优化" << std::endl;
-    std::cout << "  -g, --debug            生成调试信息" << std::endl;
-    std::cout << "  -j, --jit              JIT模式直接执行" << std::endl;
-    std::cout << "  -s, --stats            显示编译统计信息" << std::endl;
-    std::cout << "  -h, --help             显示帮助信息" << std::endl;
+    std::cout << "Options:" << std::endl;
+    std::cout << "  -i, --input <file>     Input Brainfuck source file" << std::endl;
+    std::cout << "  -o, --output <file>    Output executable filename" << std::endl;
+    std::cout << "  -m, --memory <size>    Memory size (default: 30000)" << std::endl;
+    std::cout << "  -O, --optimize         Enable optimization" << std::endl;
+    std::cout << "  -g, --debug            Generate debug info" << std::endl;
+    std::cout << "  -j, --jit              JIT mode direct execution" << std::endl;
+    std::cout << "  -s, --stats            Show compilation statistics" << std::endl;
+    std::cout << "  -h, --help             Show help information" << std::endl;
     std::cout << std::endl;
-    std::cout << "示例:" << std::endl;
+    std::cout << "Examples:" << std::endl;
     std::cout << "  " << programName << " -i hello.bf -o hello" << std::endl;
     std::cout << "  " << programName << " -i mandelbrot.bf -o mandelbrot -O -m 60000" << std::endl;
     std::cout << "  " << programName << " -i test.bf -j -s" << std::endl;
 }
 
 /**
- * @brief 读取文件内容
+ * @brief Read file content
  */
 std::string readFile(const std::string& filename) {
     std::ifstream file(filename);
     if (!file.is_open()) {
-        throw std::runtime_error("无法打开文件: " + filename);
+        throw std::runtime_error("Cannot open file: " + filename);
     }
 
     std::stringstream buffer;
@@ -44,7 +44,7 @@ std::string readFile(const std::string& filename) {
 }
 
 /**
- * @brief 解析命令行参数
+ * @brief Parse command line arguments
  */
 struct CommandLineOptions {
     std::string inputFile;
@@ -67,19 +67,19 @@ CommandLineOptions parseCommandLine(int argc, char* argv[]) {
             if (i + 1 < argc) {
                 options.inputFile = argv[++i];
             } else {
-                throw std::runtime_error("缺少输入文件名参数");
+                throw std::runtime_error("Missing input filename parameter");
             }
         } else if (arg == "-o" || arg == "--output") {
             if (i + 1 < argc) {
                 options.outputFile = argv[++i];
             } else {
-                throw std::runtime_error("缺少输出文件名参数");
+                throw std::runtime_error("Missing output filename parameter");
             }
         } else if (arg == "-m" || arg == "--memory") {
             if (i + 1 < argc) {
                 options.memorySize = std::stoul(argv[++i]);
             } else {
-                throw std::runtime_error("缺少内存大小参数");
+                throw std::runtime_error("Missing memory size parameter");
             }
         } else if (arg == "-O" || arg == "--optimize") {
             options.enableOptimization = true;
@@ -92,7 +92,7 @@ CommandLineOptions parseCommandLine(int argc, char* argv[]) {
         } else if (arg == "-h" || arg == "--help") {
             options.showHelp = true;
         } else {
-            throw std::runtime_error("未知选项: " + arg);
+            throw std::runtime_error("Unknown option: " + arg);
         }
     }
 
@@ -100,89 +100,89 @@ CommandLineOptions parseCommandLine(int argc, char* argv[]) {
 }
 
 /**
- * @brief 显示编译统计信息
+ * @brief Display compilation statistics
  */
 void showStatistics(const BrainfuckCompiler& compiler) {
     auto stats = compiler.getStatistics();
 
-    std::cout << "\n=== 编译统计信息 ===" << std::endl;
-    std::cout << "指令使用统计:" << std::endl;
+    std::cout << "\n=== Compilation Statistics ===" << std::endl;
+    std::cout << "Instruction usage statistics:" << std::endl;
 
     const char* instructionNames[] = {">", "<", "+", "-", ".", ",", "[", "]"};
-    const char* instructionDesc[] = {"指针右移", "指针左移", "字节递增", "字节递减",
-                                     "输出",     "输入",     "循环开始", "循环结束"};
+    const char* instructionDesc[] = {"Pointer right", "Pointer left", "Byte increment", "Byte decrement",
+                                     "Output",        "Input",        "Loop start",     "Loop end"};
 
     size_t totalInstructions = 0;
 
     for (size_t i = 0; i < 8; ++i) {
         char instr = *instructionNames[i];
         if (stats.count(instr) > 0) {
-            std::cout << "  '" << instr << "' (" << instructionDesc[i] << "): " << stats.at(instr) << " 次"
+            std::cout << "  '" << instr << "' (" << instructionDesc[i] << "): " << stats.at(instr) << " times"
                       << std::endl;
             totalInstructions += stats.at(instr);
         }
     }
 
-    std::cout << "总指令数: " << totalInstructions << std::endl;
+    std::cout << "Total instructions: " << totalInstructions << std::endl;
 }
 
 int main(int argc, char* argv[]) {
     try {
-        // 解析命令行参数
+        // Parse command line arguments
         CommandLineOptions options = parseCommandLine(argc, argv);
 
-        // 显示帮助
+        // Display help
         if (options.showHelp) {
             showUsage(argv[0]);
             return 0;
         }
 
-        // 检查必需参数
+        // Check required parameters
         if (options.inputFile.empty()) {
-            std::cerr << "错误: 必须指定输入文件" << std::endl;
-            std::cerr << "使用 '" << argv[0] << " --help' 查看用法" << std::endl;
+            std::cerr << "Error: Input file must be specified" << std::endl;
+            std::cerr << "Use '" << argv[0] << " --help' for usage" << std::endl;
             return 1;
         }
 
-        // 读取源文件
+        // Read source file
         std::string sourceCode = readFile(options.inputFile);
 
-        // 创建编译器
+        // Create compiler
         BrainfuckCompiler compiler(options.memorySize);
 
-        // 设置编译选项
+        // Set compilation options
         compiler.setOptimization(options.enableOptimization);
         compiler.setDebugInfo(options.enableDebugInfo);
 
-        // 编译
-        std::cout << "正在编译: " << options.inputFile << std::endl;
-        std::cout << "内存大小: " << options.memorySize << " 字节" << std::endl;
-        std::cout << "优化: " << (options.enableOptimization ? "启用" : "禁用") << std::endl;
-        std::cout << "调试信息: " << (options.enableDebugInfo ? "启用" : "禁用") << std::endl;
-        std::cout << "执行模式: " << (options.enableJIT ? "JIT" : "编译") << std::endl;
+        // Compile
+        std::cout << "Compiling: " << options.inputFile << std::endl;
+        std::cout << "Memory size: " << options.memorySize << " bytes" << std::endl;
+        std::cout << "Optimization: " << (options.enableOptimization ? "Enabled" : "Disabled") << std::endl;
+        std::cout << "Debug info: " << (options.enableDebugInfo ? "Enabled" : "Disabled") << std::endl;
+        std::cout << "Execution mode: " << (options.enableJIT ? "JIT" : "Compile") << std::endl;
 
         bool success = compiler.compile(sourceCode, options.outputFile, options.enableJIT);
 
         if (!success) {
-            std::cerr << "编译失败" << std::endl;
+            std::cerr << "Compilation failed" << std::endl;
             return 1;
         }
 
-        // 显示统计信息
+        // Display statistics
         if (options.showStats) {
             showStatistics(compiler);
         }
 
-        std::cout << "编译成功!" << std::endl;
+        std::cout << "Compilation successful!" << std::endl;
 
         if (!options.enableJIT) {
-            std::cout << "输出文件: " << options.outputFile << std::endl;
+            std::cout << "Output file: " << options.outputFile << std::endl;
         }
 
         return 0;
 
     } catch (const std::exception& e) {
-        std::cerr << "错误: " << e.what() << std::endl;
+        std::cerr << "Error: " << e.what() << std::endl;
         return 1;
     }
 }

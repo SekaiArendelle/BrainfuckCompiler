@@ -15,79 +15,79 @@
 
 /**
  * @class BrainfuckCompiler
- * @brief 将Brainfuck源代码编译为原生机器码的LLVM编译器
+ * @brief LLVM compiler that compiles Brainfuck source code to native machine code
  *
- * 该类实现了完整的Brainfuck语言编译器，包括：
- * - 完整的8条Brainfuck指令支持
- * - LLVM IR生成
- * - 优化支持
- * - JIT执行
- * - 调试信息生成
+ * This class implements a complete Brainfuck language compiler, including:
+ * - Complete support for 8 Brainfuck instructions
+ * - LLVM IR generation
+ * - Optimization support
+ * - JIT execution
+ * - Debug information generation
  */
 class BrainfuckCompiler {
 public:
     /**
-     * @brief 构造函数
-     * @param memorySize 内存大小（默认30000个单元）
+     * @brief Constructor
+     * @param memorySize Memory size (default 30000 cells)
      */
     explicit BrainfuckCompiler(size_t memorySize = 30000);
 
     /**
-     * @brief 析构函数
+     * @brief Destructor
      */
     ~BrainfuckCompiler();
 
     /**
-     * @brief 编译Brainfuck源代码
-     * @param source 源代码字符串
-     * @param outputFile 输出文件名（不含扩展名）
-     * @param enableJIT 是否启用JIT模式直接执行
-     * @return 编译成功返回true
+     * @brief Compile Brainfuck source code
+     * @param source Source code string
+     * @param outputFile Output filename (without extension)
+     * @param enableJIT Whether to enable JIT mode for direct execution
+     * @return Returns true if compilation successful
      */
     bool compile(const std::string& source, const std::string& outputFile, bool enableJIT = false);
 
     /**
-     * @brief 启用/禁用优化
-     * @param enable 是否启用优化
+     * @brief Enable/disable optimization
+     * @param enable Whether to enable optimization
      */
     void setOptimization(bool enable) {
         m_enableOptimization = enable;
     }
 
     /**
-     * @brief 启用/禁用调试信息
-     * @param enable 是否启用调试信息
+     * @brief Enable/disable debug information
+     * @param enable Whether to enable debug information
      */
     void setDebugInfo(bool enable) {
         m_enableDebugInfo = enable;
     }
 
     /**
-     * @brief 获取编译统计信息
-     * @return 包含各指令使用次数的map
+     * @brief Get compilation statistics
+     * @return Map containing instruction usage counts
      */
     std::map<char, size_t> getStatistics() const {
         return m_statistics;
     }
 
 private:
-    // LLVM初始化
+    // LLVM initialization
     void initializeLLVM();
 
-    // IR生成主函数
+    // IR generation main function
     void generateIR(const std::string& source);
 
-    // Brainfuck指令处理函数
-    void handleIncrementPtr(); // > 指针递增
-    void handleDecrementPtr(); // < 指针递减
-    void handleIncrementByte(); // + 字节递增
-    void handleDecrementByte(); // - 字节递减
-    void handleOutput(); // . 输出
-    void handleInput(); // , 输入
-    void handleLoopStart(size_t ip); // [ 循环开始
-    void handleLoopEnd(size_t ip); // ] 循环结束
+    // Brainfuck instruction handling functions
+    void handleIncrementPtr(); // > Pointer increment
+    void handleDecrementPtr(); // < Pointer decrement
+    void handleIncrementByte(); // + Byte increment
+    void handleDecrementByte(); // - Byte decrement
+    void handleOutput(); // . Output
+    void handleInput(); // , Input
+    void handleLoopStart(size_t ip); // [ Loop start
+    void handleLoopEnd(size_t ip); // ] Loop end
 
-    // 辅助函数
+    // Helper functions
     void createMainFunction();
     void allocateMemory();
     void setupRuntimeFunctions();
@@ -95,41 +95,41 @@ private:
     void emitObjectFile(const std::string& outputFile);
     void executeJIT();
 
-    // 错误处理
+    // Error handling
     bool checkBrackets(const std::string& source);
     void reportError(const std::string& message);
 
-    // 调试信息生成
+    // Debug information generation
     void createDebugInfo();
     void finalizeDebugInfo();
 
-    // 成员变量
-    size_t m_memorySize; // 内存大小
-    bool m_enableOptimization; // 是否启用优化
-    bool m_enableDebugInfo; // 是否启用调试信息
-    std::map<char, size_t> m_statistics; // 指令统计
+    // Member variables
+    size_t m_memorySize; // Memory size
+    bool m_enableOptimization; // Whether optimization is enabled
+    bool m_enableDebugInfo; // Whether debug info is enabled
+    std::map<char, size_t> m_statistics; // Instruction statistics
 
-    // LLVM相关成员
+    // LLVM related members
     std::unique_ptr<llvm::LLVMContext> m_context;
     std::unique_ptr<llvm::Module> m_module;
     std::unique_ptr<llvm::IRBuilder<>> m_builder;
     std::unique_ptr<llvm::DIBuilder> m_diBuilder;
 
-    // IR值
-    llvm::Value* m_memoryArray; // 内存数组
-    llvm::Value* m_dataPtr; // 数据指针
-    llvm::Function* m_mainFunction; // main函数
+    // IR values
+    llvm::Value* m_memoryArray; // Memory array
+    llvm::Value* m_dataPtr; // Data pointer
+    llvm::Function* m_mainFunction; // Main function
 
-    // 运行时函数
-    llvm::Function* m_putcharFunc; // putchar函数
-    llvm::Function* m_getcharFunc; // getchar函数
+    // Runtime functions
+    llvm::Function* m_putcharFunc; // putchar function
+    llvm::Function* m_getcharFunc; // getchar function
 
-    // 循环处理
+    // Loop handling
     std::stack<llvm::BasicBlock*> m_loopStartBlocks;
     std::stack<llvm::BasicBlock*> m_loopEndBlocks;
 
-    // 源代码位置跟踪
-    size_t m_currentIP; // 当前指令指针
+    // Source location tracking
+    size_t m_currentIP; // Current instruction pointer
 };
 
 #endif // BRAINFUCK_COMPILER_H

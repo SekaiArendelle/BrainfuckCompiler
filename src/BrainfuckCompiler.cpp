@@ -49,38 +49,38 @@ BrainfuckCompiler::BrainfuckCompiler(size_t memorySize)
       m_enableOptimization(true),
       m_enableDebugInfo(false),
       m_currentIP(0) {
-    // 初始化LLVM
+    // Initialize LLVM
     initializeLLVM();
 }
 
 BrainfuckCompiler::~BrainfuckCompiler() {
-    // 清理资源
+    // Clean up resources
     if (m_diBuilder) {
         finalizeDebugInfo();
     }
 }
 
 void BrainfuckCompiler::initializeLLVM() {
-    // 初始化LLVM目标
+    // Initialize LLVM targets
     InitializeAllTargetInfos();
     InitializeAllTargets();
     InitializeAllTargetMCs();
     InitializeAllAsmParsers();
     InitializeAllAsmPrinters();
 
-    // 创建LLVM上下文和模块
+    // Create LLVM context and module
     m_context = std::make_unique<LLVMContext>();
     m_module = std::make_unique<Module>("brainfuck_module", *m_context);
     m_builder = std::make_unique<IRBuilder<>>(*m_context);
 
-    // 设置目标三元组
+    // Set target triple
     auto targetTriple = sys::getDefaultTargetTriple();
     m_module->setTargetTriple(llvm::Triple(targetTriple));
 }
 
 bool BrainfuckCompiler::compile(const std::string& source, const std::string& outputFile, bool enableJIT) {
     try {
-        // 检查括号匹配
+        // Check bracket matching
         if (!checkBrackets(source)) {
             return false;
         }
@@ -103,7 +103,7 @@ bool BrainfuckCompiler::compile(const std::string& source, const std::string& ou
 
         // 验证IR
         if (verifyModule(*m_module, &errs())) {
-            reportError("生成的IR无效");
+            reportError("Generated IR is invalid");
             return false;
         }
 
@@ -126,7 +126,7 @@ bool BrainfuckCompiler::compile(const std::string& source, const std::string& ou
         return true;
 
     } catch (const std::exception& e) {
-        reportError(std::string("编译错误: ") + e.what());
+        reportError(std::string("Compilation error: ") + e.what());
         return false;
     }
 }
@@ -140,14 +140,14 @@ bool BrainfuckCompiler::checkBrackets(const std::string& source) {
         } else if (c == ']') {
             bracketCount--;
             if (bracketCount < 0) {
-                reportError("语法错误: 多余的右括号 ']'");
+                reportError("Syntax error: Extra right bracket ']'");
                 return false;
             }
         }
     }
 
     if (bracketCount != 0) {
-        reportError("语法错误: 括号不匹配");
+        reportError("Syntax error: Brackets do not match");
         return false;
     }
 
@@ -155,29 +155,29 @@ bool BrainfuckCompiler::checkBrackets(const std::string& source) {
 }
 
 void BrainfuckCompiler::createMainFunction() {
-    // 创建main函数: int main()
-    FunctionType* mainType = FunctionType::get(Type::getInt32Ty(*m_context), // 返回类型
-                                               false // 不是可变参数
+    // Create main function: int main()
+    FunctionType* mainType = FunctionType::get(Type::getInt32Ty(*m_context), // Return type
+                                               false // Not variadic
     );
 
     m_mainFunction = Function::Create(mainType, Function::ExternalLinkage, "main", m_module.get());
 
-    // 创建入口基本块
+    // Create entry basic block
     BasicBlock* entryBlock = BasicBlock::Create(*m_context, "entry", m_mainFunction);
 
     m_builder->SetInsertPoint(entryBlock);
 }
 
 void BrainfuckCompiler::allocateMemory() {
-    // 分配内存数组: int8_t memory[memorySize]
+    // Allocate memory array: int8_t memory[memorySize]
     ArrayType* memoryArrayType = ArrayType::get(Type::getInt8Ty(*m_context), m_memorySize);
 
     m_memoryArray = m_builder->CreateAlloca(memoryArrayType, nullptr, "memory");
 
-    // 将内存初始化为0
+    // Initialize memory to 0
     Value* zero = ConstantInt::get(Type::getInt8Ty(*m_context), 0);
 
-    // 使用memset初始化内存
+    // Use memset to initialize memory
     Function* memsetFunc = Intrinsic::getOrInsertDeclaration(m_module.get(), Intrinsic::memset,
                                                              {m_memoryArray->getType(), Type::getInt8Ty(*m_context)});
 
@@ -187,10 +187,10 @@ void BrainfuckCompiler::allocateMemory() {
     m_builder->CreateCall(
         memsetFunc, {m_builder->CreateBitCast(m_memoryArray, Type::getInt8Ty(*m_context)), zero, size, volatileFlag});
 
-    // 分配数据指针: int8_t* dataPtr = &memory[memorySize/2]
+    // Allocate data pointer: int8_t* dataPtr = &memory[memorySize/2]
     m_dataPtr = m_builder->CreateAlloca(Type::getInt8Ty(*m_context), nullptr, "dataptr");
 
-    // 初始化指针到内存中间位置
+    // Initialize pointer to middle of memory
     Value* indices[] = {ConstantInt::get(Type::getInt32Ty(*m_context), 0),
                         ConstantInt::get(Type::getInt32Ty(*m_context), m_memorySize / 2)};
 
@@ -200,12 +200,12 @@ void BrainfuckCompiler::allocateMemory() {
 }
 
 void BrainfuckCompiler::setupRuntimeFunctions() {
-    // 创建putchar函数声明: int putchar(int)
+    // Create putchar function declaration: int putchar(int)
     FunctionType* putcharType = FunctionType::get(Type::getInt32Ty(*m_context), {Type::getInt32Ty(*m_context)}, false);
 
     m_putcharFunc = Function::Create(putcharType, Function::ExternalLinkage, "putchar", m_module.get());
 
-    // 创建getchar函数声明: int getchar()
+    // Create getchar function declaration: int getchar()
     FunctionType* getcharType = FunctionType::get(Type::getInt32Ty(*m_context), false);
 
     m_getcharFunc = Function::Create(getcharType, Function::ExternalLinkage, "getchar", m_module.get());
@@ -214,17 +214,17 @@ void BrainfuckCompiler::setupRuntimeFunctions() {
 void BrainfuckCompiler::generateIR(const std::string& source) {
     m_currentIP = 0;
 
-    // 遍历源代码中的每个字符
+    // Iterate through each character in source code
     for (size_t i = 0; i < source.length(); ++i) {
         char c = source[i];
         m_currentIP = i;
 
-        // 跳过非Brainfuck指令字符
+        // Skip non-Brainfuck instruction characters
         if (c != '>' && c != '<' && c != '+' && c != '-' && c != '.' && c != ',' && c != '[' && c != ']') {
             continue;
         }
 
-        // 统计指令使用
+        // Count instruction usage
         m_statistics[c]++;
 
         switch (c) {
@@ -255,182 +255,182 @@ void BrainfuckCompiler::generateIR(const std::string& source) {
         }
     }
 
-    // 创建返回指令
+    // Create return instruction
     Value* retValue = ConstantInt::get(Type::getInt32Ty(*m_context), 0);
     m_builder->CreateRet(retValue);
 }
 
 void BrainfuckCompiler::handleIncrementPtr() {
-    // 加载当前指针值
+    // Load current pointer value
     Value* currentPtr = m_builder->CreateLoad(Type::getInt8Ty(m_builder->getContext()), m_dataPtr, "current_ptr");
 
-    // 指针递增
+    // Pointer increment
     Value* newPtr = m_builder->CreateConstGEP1_32(Type::getInt8Ty(*m_context), currentPtr, 1, "ptr_inc");
 
-    // 存储新指针值
+    // Store new pointer value
     m_builder->CreateStore(newPtr, m_dataPtr);
 }
 
 void BrainfuckCompiler::handleDecrementPtr() {
-    // 加载当前指针值
+    // Load current pointer value
     Value* currentPtr = m_builder->CreateLoad(Type::getInt8Ty(m_builder->getContext()), m_dataPtr, "current_ptr");
 
-    // 指针递减
+    // Pointer decrement
     Value* newPtr = m_builder->CreateConstGEP1_32(Type::getInt8Ty(*m_context), currentPtr, -1, "ptr_dec");
 
-    // 存储新指针值
+    // Store new pointer value
     m_builder->CreateStore(newPtr, m_dataPtr);
 }
 
 void BrainfuckCompiler::handleIncrementByte() {
-    // 加载当前指针
+    // Load current pointer
     Value* currentPtr = m_builder->CreateLoad(Type::getInt8Ty(m_builder->getContext()), m_dataPtr, "current_ptr");
 
-    // 加载当前字节值
+    // Load current byte value
     Value* currentValue = m_builder->CreateLoad(Type::getInt8Ty(m_builder->getContext()), currentPtr, "current_val");
 
-    // 字节值递增（8位无符号加法）
+    // Byte value increment (8-bit unsigned addition)
     Value* newValue = m_builder->CreateAdd(currentValue, ConstantInt::get(Type::getInt8Ty(*m_context), 1), "val_inc",
-                                           true, // 有符号溢出
-                                           true // 无符号溢出
+                                           true, // Signed overflow
+                                           true // Unsigned overflow
     );
 
-    // 存储新字节值
+    // Store new byte value
     m_builder->CreateStore(newValue, currentPtr);
 }
 
 void BrainfuckCompiler::handleDecrementByte() {
-    // 加载当前指针
+    // Load current pointer
     Value* currentPtr = m_builder->CreateLoad(Type::getInt8Ty(m_builder->getContext()), m_dataPtr, "current_ptr");
 
-    // 加载当前字节值
+    // Load current byte value
     Value* currentValue = m_builder->CreateLoad(Type::getInt8Ty(m_builder->getContext()), currentPtr, "current_val");
 
-    // 字节值递减（8位无符号减法）
+    // Byte value decrement (8-bit unsigned subtraction)
     Value* newValue = m_builder->CreateSub(currentValue, ConstantInt::get(Type::getInt8Ty(*m_context), 1), "val_dec",
-                                           true, // 有符号溢出
-                                           true // 无符号溢出
+                                           true, // Signed overflow
+                                           true // Unsigned overflow
     );
 
-    // 存储新字节值
+    // Store new byte value
     m_builder->CreateStore(newValue, currentPtr);
 }
 
 void BrainfuckCompiler::handleOutput() {
-    // 加载当前指针
+    // Load current pointer
     Value* currentPtr = m_builder->CreateLoad(Type::getInt8Ty(m_builder->getContext()), m_dataPtr, "current_ptr");
 
-    // 加载当前字节值
+    // Load current byte value
     Value* currentValue = m_builder->CreateLoad(Type::getInt8Ty(m_builder->getContext()), currentPtr, "output_val");
 
-    // 零扩展到32位（putchar需要int参数）
+    // Zero extend to 32-bit (putchar needs int parameter)
     Value* extendedValue = m_builder->CreateZExt(currentValue, Type::getInt32Ty(*m_context), "output_int");
 
-    // 调用putchar
+    // Call putchar
     m_builder->CreateCall(m_putcharFunc, {extendedValue});
 }
 
 void BrainfuckCompiler::handleInput() {
-    // 调用getchar
+    // Call getchar
     Value* inputValue = m_builder->CreateCall(m_getcharFunc, {}, "input_char");
 
-    // 截断到8位
+    // Truncate to 8-bit
     Value* truncatedValue = m_builder->CreateTrunc(inputValue, Type::getInt8Ty(*m_context), "input_byte");
 
-    // 加载当前指针
+    // Load current pointer
     Value* currentPtr = m_builder->CreateLoad(Type::getInt8Ty(m_builder->getContext()), m_dataPtr, "current_ptr");
 
-    // 存储输入值
+    // Store input value
     m_builder->CreateStore(truncatedValue, currentPtr);
 }
 
 void BrainfuckCompiler::handleLoopStart(size_t ip) {
-    // 创建循环基本块
+    // Create loop basic blocks
     BasicBlock* loopHeader = BasicBlock::Create(*m_context, "loop_header_" + std::to_string(ip), m_mainFunction);
 
     BasicBlock* loopBody = BasicBlock::Create(*m_context, "loop_body_" + std::to_string(ip), m_mainFunction);
 
     BasicBlock* loopEnd = BasicBlock::Create(*m_context, "loop_end_" + std::to_string(ip), m_mainFunction);
 
-    // 跳转到循环头部
+    // Jump to loop header
     m_builder->CreateBr(loopHeader);
 
-    // 设置插入点到循环头部
+    // Set insert point to loop header
     m_builder->SetInsertPoint(loopHeader);
 
-    // 加载当前字节值
+    // Load current byte value
     Value* currentPtr = m_builder->CreateLoad(Type::getInt8Ty(m_builder->getContext()), m_dataPtr, "current_ptr");
     Value* currentValue = m_builder->CreateLoad(Type::getInt8Ty(m_builder->getContext()), currentPtr, "loop_val");
 
-    // 比较值是否为0
+    // Compare value to 0
     Value* zero = ConstantInt::get(Type::getInt8Ty(*m_context), 0);
     Value* condition = m_builder->CreateICmpEQ(currentValue, zero, "loop_cond");
 
-    // 条件分支
+    // Conditional branch
     m_builder->CreateCondBr(condition, loopEnd, loopBody);
 
-    // 设置插入点到循环体
+    // Set insert point to loop body
     m_builder->SetInsertPoint(loopBody);
 
-    // 压入循环栈
+    // Push to loop stack
     m_loopStartBlocks.push(loopHeader);
     m_loopEndBlocks.push(loopEnd);
 }
 
 void BrainfuckCompiler::handleLoopEnd(size_t ip) {
     if (m_loopStartBlocks.empty() || m_loopEndBlocks.empty()) {
-        reportError("语法错误: 多余的右括号 ']' 在位置 " + std::to_string(ip));
+        reportError("Syntax error: Extra right bracket ']' at position " + std::to_string(ip));
         return;
     }
 
-    // 获取循环基本块
+    // Get loop basic blocks
     BasicBlock* loopHeader = m_loopStartBlocks.top();
     BasicBlock* loopEnd = m_loopEndBlocks.top();
 
-    // 弹出循环栈
+    // Pop from loop stack
     m_loopStartBlocks.pop();
     m_loopEndBlocks.pop();
 
-    // 跳回循环头部
+    // Jump back to loop header
     m_builder->CreateBr(loopHeader);
 
-    // 设置插入点到循环结束块
+    // Set insert point to loop end block
     m_builder->SetInsertPoint(loopEnd);
 }
 
 void BrainfuckCompiler::optimizeModule() {
-    // 创建优化pass管理器
+    // Create optimization pass manager
     legacy::PassManager pm;
 
-    // 添加优化passes
+    // Add optimization passes
     pm.add(createInstructionCombiningPass());
     pm.add(createReassociatePass());
     pm.add(createGVNPass());
     pm.add(createCFGSimplificationPass());
 
-    // 运行优化
+    // Run optimization
     pm.run(*m_module);
 }
 
 void BrainfuckCompiler::emitObjectFile(const std::string& outputFile) {
-    // 获取目标机器
+    // Get target machine
     std::string error;
     auto target = TargetRegistry::lookupTarget(m_module->getTargetTriple(), error);
 
     if (!target) {
-        reportError("目标查找失败: " + error);
+        reportError("Target lookup failed: " + error);
         return;
     }
 
-    // 目标机器选项
+    // Target machine options
     TargetOptions options;
     auto targetMachine =
         target->createTargetMachine(m_module->getTargetTriple(), "generic", "", options, std::optional<Reloc::Model>());
 
-    // 设置数据布局
+    // Set data layout
     m_module->setDataLayout(targetMachine->createDataLayout());
 
-    // 输出文件名
+    // Output filenames
     std::string objectFile = outputFile + ".o";
     std::string executableFile = outputFile;
 
@@ -439,65 +439,65 @@ void BrainfuckCompiler::emitObjectFile(const std::string& outputFile) {
     raw_fd_ostream dest(objectFile, ec, sys::fs::OF_None);
 
     if (ec) {
-        reportError("无法打开输出文件: " + ec.message());
+        reportError("Cannot open output file: " + ec.message());
         return;
     }
 
-    // 创建pass管理器
+    // Create pass manager
     legacy::PassManager pass;
 
-    // 添加目标文件生成pass
+    // Add object file generation pass
     if (targetMachine->addPassesToEmitFile(pass, dest, nullptr, llvm::CodeGenFileType::ObjectFile)) {
-        reportError("目标机器不支持目标文件生成");
+        reportError("Target machine does not support object file generation");
         return;
     }
 
-    // 运行pass
+    // Run pass
     pass.run(*m_module);
     dest.flush();
 
-    // 链接生成可执行文件
+    // Link to generate executable file
     std::string linkCommand = "clang " + objectFile + " -o " + executableFile;
     int result = system(linkCommand.c_str());
 
     if (result != 0) {
-        reportError("链接失败");
+        reportError("Linking failed");
         return;
     }
 
-    // 删除目标文件
+    // Delete object file
     std::remove(objectFile.c_str());
 
-    std::cout << "编译完成: " << executableFile << std::endl;
+    std::cout << "Compilation completed: " << executableFile << std::endl;
 }
 
 void BrainfuckCompiler::executeJIT() {
-    // 创建JIT执行引擎
+    // Create JIT execution engine
     std::string error;
     ExecutionEngine* ee = EngineBuilder(std::move(m_module)).setErrorStr(&error).create();
 
     if (!ee) {
-        reportError("JIT引擎创建失败: " + error);
+        reportError("JIT engine creation failed: " + error);
         return;
     }
 
-    // 执行main函数
+    // Execute main function
     std::vector<GenericValue> noargs;
     GenericValue result = ee->runFunction(m_mainFunction, noargs);
 
-    std::cout << "JIT执行完成，返回值: " << result.IntVal.getZExtValue() << std::endl;
+    std::cout << "JIT execution completed, return value: " << result.IntVal.getZExtValue() << std::endl;
 
     delete ee;
 }
 
 void BrainfuckCompiler::createDebugInfo() {
-    // 创建调试信息构建器
+    // Create debug information builder
     m_diBuilder = std::make_unique<DIBuilder>(*m_module);
 
-    // 创建编译单元
+    // Create compilation unit
     DIFile* file = m_diBuilder->createFile("brainfuck.bf", "/tmp");
 
-    // 创建子程序（main函数）
+    // Create subroutine (main function)
     DISubprogram* sp =
         m_diBuilder->createFunction(file, "main", StringRef(), file, 1,
                                     m_diBuilder->createSubroutineType(m_diBuilder->getOrCreateTypeArray({})), false);
@@ -512,5 +512,5 @@ void BrainfuckCompiler::finalizeDebugInfo() {
 }
 
 void BrainfuckCompiler::reportError(const std::string& message) {
-    std::cerr << "错误: " << message << std::endl;
+    std::cerr << "Error: " << message << std::endl;
 }
