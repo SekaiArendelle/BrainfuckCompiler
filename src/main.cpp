@@ -37,7 +37,7 @@ std::string readFile(const std::string& filename) {
     if (!file.is_open()) {
         throw std::runtime_error("无法打开文件: " + filename);
     }
-    
+
     std::stringstream buffer;
     buffer << file.rdbuf();
     return buffer.str();
@@ -59,10 +59,10 @@ struct CommandLineOptions {
 
 CommandLineOptions parseCommandLine(int argc, char* argv[]) {
     CommandLineOptions options;
-    
+
     for (int i = 1; i < argc; ++i) {
         std::string arg = argv[i];
-        
+
         if (arg == "-i" || arg == "--input") {
             if (i + 1 < argc) {
                 options.inputFile = argv[++i];
@@ -95,7 +95,7 @@ CommandLineOptions parseCommandLine(int argc, char* argv[]) {
             throw std::runtime_error("未知选项: " + arg);
         }
     }
-    
+
     return options;
 }
 
@@ -104,27 +104,25 @@ CommandLineOptions parseCommandLine(int argc, char* argv[]) {
  */
 void showStatistics(const BrainfuckCompiler& compiler) {
     auto stats = compiler.getStatistics();
-    
+
     std::cout << "\n=== 编译统计信息 ===" << std::endl;
     std::cout << "指令使用统计:" << std::endl;
-    
+
     const char* instructionNames[] = {">", "<", "+", "-", ".", ",", "[", "]"};
-    const char* instructionDesc[] = {
-        "指针右移", "指针左移", "字节递增", "字节递减",
-        "输出", "输入", "循环开始", "循环结束"
-    };
-    
+    const char* instructionDesc[] = {"指针右移", "指针左移", "字节递增", "字节递减",
+                                     "输出",     "输入",     "循环开始", "循环结束"};
+
     size_t totalInstructions = 0;
-    
+
     for (size_t i = 0; i < 8; ++i) {
         char instr = *instructionNames[i];
         if (stats.count(instr) > 0) {
-            std::cout << "  '" << instr << "' (" << instructionDesc[i] << "): " 
-                      << stats.at(instr) << " 次" << std::endl;
+            std::cout << "  '" << instr << "' (" << instructionDesc[i] << "): " << stats.at(instr) << " 次"
+                      << std::endl;
             totalInstructions += stats.at(instr);
         }
     }
-    
+
     std::cout << "总指令数: " << totalInstructions << std::endl;
 }
 
@@ -132,57 +130,57 @@ int main(int argc, char* argv[]) {
     try {
         // 解析命令行参数
         CommandLineOptions options = parseCommandLine(argc, argv);
-        
+
         // 显示帮助
         if (options.showHelp) {
             showUsage(argv[0]);
             return 0;
         }
-        
+
         // 检查必需参数
         if (options.inputFile.empty()) {
             std::cerr << "错误: 必须指定输入文件" << std::endl;
             std::cerr << "使用 '" << argv[0] << " --help' 查看用法" << std::endl;
             return 1;
         }
-        
+
         // 读取源文件
         std::string sourceCode = readFile(options.inputFile);
-        
+
         // 创建编译器
         BrainfuckCompiler compiler(options.memorySize);
-        
+
         // 设置编译选项
         compiler.setOptimization(options.enableOptimization);
         compiler.setDebugInfo(options.enableDebugInfo);
-        
+
         // 编译
         std::cout << "正在编译: " << options.inputFile << std::endl;
         std::cout << "内存大小: " << options.memorySize << " 字节" << std::endl;
         std::cout << "优化: " << (options.enableOptimization ? "启用" : "禁用") << std::endl;
         std::cout << "调试信息: " << (options.enableDebugInfo ? "启用" : "禁用") << std::endl;
         std::cout << "执行模式: " << (options.enableJIT ? "JIT" : "编译") << std::endl;
-        
+
         bool success = compiler.compile(sourceCode, options.outputFile, options.enableJIT);
-        
+
         if (!success) {
             std::cerr << "编译失败" << std::endl;
             return 1;
         }
-        
+
         // 显示统计信息
         if (options.showStats) {
             showStatistics(compiler);
         }
-        
+
         std::cout << "编译成功!" << std::endl;
-        
+
         if (!options.enableJIT) {
             std::cout << "输出文件: " << options.outputFile << std::endl;
         }
-        
+
         return 0;
-        
+
     } catch (const std::exception& e) {
         std::cerr << "错误: " << e.what() << std::endl;
         return 1;
