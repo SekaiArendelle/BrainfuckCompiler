@@ -196,7 +196,7 @@ void BrainfuckCompiler::allocateMemory() {
     Value* zero = ConstantInt::get(Type::getInt8Ty(*m_context), 0);
     
     // 使用memset初始化内存
-    Function* memsetFunc = Intrinsic::getDeclaration(
+    Function* memsetFunc = Intrinsic::getOrInsertDeclaration(
         m_module.get(),
         Intrinsic::memset,
         { m_memoryArray->getType(), Type::getInt8Ty(*m_context) }
@@ -593,14 +593,6 @@ void BrainfuckCompiler::createDebugInfo() {
     
     // 创建编译单元
     DIFile* file = m_diBuilder->createFile("brainfuck.bf", "/tmp");
-    DICompileUnit* cu = m_diBuilder->createCompileUnit(
-        dwarf::DW_LANG_C,
-        file,
-        "Brainfuck Compiler",
-        false,
-        "",
-        0
-    );
     
     // 创建子程序（main函数）
     DISubprogram* sp = m_diBuilder->createFunction(
@@ -609,12 +601,8 @@ void BrainfuckCompiler::createDebugInfo() {
         StringRef(),
         file,
         1,
-        m_diBuilder->createSubroutineType(m_diBuilder->getOrCreateTypeArray(std::nullopt)),
+        m_diBuilder->createSubroutineType(m_diBuilder->getOrCreateTypeArray({})),
         false
-        // DINode::FlagZero,
-        // 0,
-        // DINode::FlagPrototyped,
-        // false
     );
     
     m_mainFunction->setSubprogram(sp);
