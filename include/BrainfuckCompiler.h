@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstddef>
 #include <memory>
 #include <string>
 #include <string_view>
@@ -30,7 +31,7 @@ public:
      * @brief Constructor
      * @param memorySize Memory size (default 30000 cells)
      */
-    explicit BrainfuckCompiler(size_t memorySize = 30000);
+    explicit BrainfuckCompiler(std::size_t memorySize = 30000);
 
     /**
      * @brief Destructor
@@ -66,7 +67,7 @@ public:
      * @brief Get compilation statistics
      * @return Map containing instruction usage counts
      */
-    std::map<char, size_t> getStatistics() const {
+    std::map<char, std::size_t> getStatistics() const {
         return m_statistics;
     }
 
@@ -84,8 +85,8 @@ private:
     void handleDecrementByte(); // - Byte decrement
     void handleOutput(); // . Output
     void handleInput(); // , Input
-    void handleLoopStart(size_t ip); // [ Loop start
-    void handleLoopEnd(size_t ip); // ] Loop end
+    void handleLoopStart(std::size_t ip); // [ Loop start
+    void handleLoopEnd(std::size_t ip); // ] Loop end
 
     // Helper functions
     void createMainFunction();
@@ -104,10 +105,10 @@ private:
     void finalizeDebugInfo();
 
     // Member variables
-    size_t m_memorySize; // Memory size
+    std::size_t m_memorySize; // Memory size
     bool m_enableOptimization; // Whether optimization is enabled
     bool m_enableDebugInfo; // Whether debug info is enabled
-    std::map<char, size_t> m_statistics; // Instruction statistics
+    std::map<char, std::size_t> m_statistics; // Instruction statistics
 
     // LLVM related members
     std::unique_ptr<llvm::LLVMContext> m_context;
@@ -129,5 +130,5 @@ private:
     std::stack<llvm::BasicBlock*> m_loopEndBlocks;
 
     // Source location tracking
-    size_t m_currentIP; // Current instruction pointer
+    std::size_t m_currentIP; // Current instruction pointer
 };

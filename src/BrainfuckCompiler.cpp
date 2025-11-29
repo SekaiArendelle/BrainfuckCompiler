@@ -42,7 +42,7 @@
 
 #include "BrainfuckCompiler.h"
 
-BrainfuckCompiler::BrainfuckCompiler(size_t memorySize)
+BrainfuckCompiler::BrainfuckCompiler(std::size_t memorySize)
     : m_memorySize(memorySize),
       m_enableOptimization(true),
       m_enableDebugInfo(false),
@@ -208,7 +208,7 @@ void BrainfuckCompiler::generateIR(std::string_view source) {
     m_currentIP = 0;
 
     // Iterate through each character in source code
-    for (size_t i = 0; i < source.length(); ++i) {
+    for (std::size_t i{}; i < source.length(); ++i) {
         char c = source[i];
         m_currentIP = i;
 
@@ -339,7 +339,7 @@ void BrainfuckCompiler::handleInput() {
     m_builder->CreateStore(truncatedValue, currentPtr);
 }
 
-void BrainfuckCompiler::handleLoopStart(size_t ip) {
+void BrainfuckCompiler::handleLoopStart(std::size_t ip) {
     // Create loop basic blocks
     llvm::BasicBlock* loopHeader =
         llvm::BasicBlock::Create(*m_context, "loop_header_" + std::to_string(ip), m_mainFunction);
@@ -374,7 +374,7 @@ void BrainfuckCompiler::handleLoopStart(size_t ip) {
     m_loopEndBlocks.push(loopEnd);
 }
 
-void BrainfuckCompiler::handleLoopEnd(size_t ip) {
+void BrainfuckCompiler::handleLoopEnd(std::size_t ip) {
     if (m_loopStartBlocks.empty() || m_loopEndBlocks.empty()) {
         reportError("Syntax error: Extra right bracket ']' at position " + std::to_string(ip));
         return;

@@ -60,7 +60,7 @@ std::string readFile(const std::string& filename) {
 struct CommandLineOptions {
     std::string inputFile;
     std::string outputFile = "a.out";
-    size_t memorySize = 30000;
+    std::size_t memorySize = 30000;
     bool enableOptimization = false;
     bool enableDebugInfo = false;
     bool enableJIT = false;
@@ -119,14 +119,14 @@ void showStatistics(const BrainfuckCompiler& compiler) {
     std::cout << "\n=== Compilation Statistics ===" << std::endl;
     std::cout << "Instruction usage statistics:" << std::endl;
 
-    const char* instructionNames[] = {">", "<", "+", "-", ".", ",", "[", "]"};
+    const char instructionNames[] = {'>', '<', '+', '-', '.', ',', '[', ']'};
     const char* instructionDesc[] = {"Pointer right", "Pointer left", "Byte increment", "Byte decrement",
                                      "Output",        "Input",        "Loop start",     "Loop end"};
 
-    size_t totalInstructions = 0;
+    std::size_t totalInstructions = 0;
 
-    for (size_t i = 0; i < 8; ++i) {
-        char instr = *instructionNames[i];
+    for (std::size_t i{}; i < 8; ++i) {
+        char instr = instructionNames[i];
         if (stats.count(instr) > 0) {
             std::cout << "  '" << instr << "' (" << instructionDesc[i] << "): " << stats.at(instr) << " times"
                       << std::endl;
