@@ -1,3 +1,5 @@
+#include <cstdio>
+#include <cstdlib>
 #include <iostream>
 #include <sstream>
 #include <fstream>
@@ -46,7 +48,8 @@ void showUsage(const char* programName) {
 std::string readFile(const std::string& filename) {
     std::ifstream file(filename);
     if (!file.is_open()) {
-        throw std::runtime_error("Cannot open file: " + filename);
+        std::fputs(("Cannot open file: " + filename + "\n").c_str(), stderr);
+        std::exit(1);
     }
 
     std::stringstream buffer;
@@ -78,19 +81,22 @@ CommandLineOptions parseCommandLine(int argc, char* argv[]) {
             if (i + 1 < argc) {
                 options.inputFile = argv[++i];
             } else {
-                throw std::runtime_error("Missing input filename parameter");
+                std::fputs("Missing input filename parameter\n", stderr);
+                std::exit(1);
             }
         } else if (arg == "-o" || arg == "--output") {
             if (i + 1 < argc) {
                 options.outputFile = argv[++i];
             } else {
-                throw std::runtime_error("Missing output filename parameter");
+                std::fputs("Missing output filename parameter\n", stderr);
+                std::exit(1);
             }
         } else if (arg == "-m" || arg == "--memory") {
             if (i + 1 < argc) {
                 options.memorySize = std::stoul(argv[++i]);
             } else {
-                throw std::runtime_error("Missing memory size parameter");
+                std::fputs("Missing memory size parameter\n", stderr);
+                std::exit(1);
             }
         } else if (arg == "-O" || arg == "--optimize") {
             options.enableOptimization = true;
@@ -103,7 +109,8 @@ CommandLineOptions parseCommandLine(int argc, char* argv[]) {
         } else if (arg == "-h" || arg == "--help") {
             options.showHelp = true;
         } else {
-            throw std::runtime_error("Unknown option: " + arg);
+            std::cout << "Unknown option: " + arg << std::endl;
+            std::exit(1);
         }
     }
 
