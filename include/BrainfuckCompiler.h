@@ -3,6 +3,7 @@
 
 #include <memory>
 #include <string>
+#include <string_view>
 #include <vector>
 #include <stack>
 #include <map>
@@ -44,7 +45,7 @@ public:
      * @param enableJIT Whether to enable JIT mode for direct execution
      * @return Returns true if compilation successful
      */
-    bool compile(const std::string& source, const std::string& outputFile, bool enableJIT = false);
+    bool compile(std::string_view source, std::string_view outputFile, bool enableJIT = false);
 
     /**
      * @brief Enable/disable optimization
@@ -75,7 +76,7 @@ private:
     void initializeLLVM();
 
     // IR generation main function
-    void generateIR(const std::string& source);
+    void generateIR(std::string_view source);
 
     // Brainfuck instruction handling functions
     void handleIncrementPtr(); // > Pointer increment
@@ -92,12 +93,12 @@ private:
     void allocateMemory();
     void setupRuntimeFunctions();
     void optimizeModule();
-    void emitObjectFile(const std::string& outputFile);
+    void emitObjectFile(std::string_view outputFile);
     void executeJIT();
 
     // Error handling
-    bool checkBrackets(const std::string& source);
-    void reportError(const std::string& message);
+    bool checkBrackets(std::string_view source);
+    void reportError(std::string_view message);
 
     // Debug information generation
     void createDebugInfo();

@@ -76,48 +76,48 @@ void BrainfuckCompiler::initializeLLVM() {
     m_module->setTargetTriple(llvm::Triple(targetTriple));
 }
 
-bool BrainfuckCompiler::compile(const std::string& source, const std::string& outputFile, bool enableJIT) {
+bool BrainfuckCompiler::compile(std::string_view source, std::string_view outputFile, bool enableJIT) {
     try {
         // Check bracket matching
         if (!checkBrackets(source)) {
             return false;
         }
 
-        // 重置统计
+        // Reset statistics
         m_statistics.clear();
 
-        // 创建主函数和分配内存
+        // Create main function and allocate memory
         createMainFunction();
         allocateMemory();
         setupRuntimeFunctions();
 
-        // 生成调试信息（如果启用）
+        // Generate debug info (if enabled)
         if (m_enableDebugInfo) {
             createDebugInfo();
         }
 
-        // 生成IR
+        // Generate IR
         generateIR(source);
 
-        // 验证IR
+        // Verify IR
         if (llvm::verifyModule(*m_module, &llvm::errs())) {
             reportError("Generated IR is invalid");
             return false;
         }
 
-        // 应用优化
+        // Apply optimizations
         if (m_enableOptimization) {
             optimizeModule();
         }
 
-        // 输出IR（调试用）
+        // Output IR (for debugging)
         // m_module->print(errs(), nullptr);
 
         if (enableJIT) {
-            // JIT模式直接执行
+            // JIT mode: direct execution
             executeJIT();
         } else {
-            // 生成目标文件
+            // Generate object file
             emitObjectFile(outputFile);
         }
 
@@ -129,7 +129,7 @@ bool BrainfuckCompiler::compile(const std::string& source, const std::string& ou
     }
 }
 
-bool BrainfuckCompiler::checkBrackets(const std::string& source) {
+bool BrainfuckCompiler::checkBrackets(std::string_view source) {
     int bracketCount = 0;
 
     for (char c : source) {
@@ -211,7 +211,7 @@ void BrainfuckCompiler::setupRuntimeFunctions() {
     m_getcharFunc = llvm::Function::Create(getcharType, llvm::Function::ExternalLinkage, "getchar", m_module.get());
 }
 
-void BrainfuckCompiler::generateIR(const std::string& source) {
+void BrainfuckCompiler::generateIR(std::string_view source) {
     m_currentIP = 0;
 
     // Iterate through each character in source code
@@ -427,7 +427,7 @@ void BrainfuckCompiler::optimizeModule() {
     pm.run(*m_module);
 }
 
-void BrainfuckCompiler::emitObjectFile(const std::string& outputFile) {
+void BrainfuckCompiler::emitObjectFile(std::string_view outputFile) {
     // Get target machine
     std::string error;
     auto target = llvm::TargetRegistry::lookupTarget(m_module->getTargetTriple(), error);
@@ -446,10 +446,10 @@ void BrainfuckCompiler::emitObjectFile(const std::string& outputFile) {
     m_module->setDataLayout(targetMachine->createDataLayout());
 
     // Output filenames
-    std::string objectFile = outputFile + ".o";
-    std::string executableFile = outputFile;
+    std::string objectFile = std::string(outputFile) + ".o";
+    std::string executableFile = std::string(outputFile);
 
-    // 生成目标文件
+    // Generate object file
     std::error_code ec;
     llvm::raw_fd_ostream dest(objectFile, ec, llvm::sys::fs::OF_None);
 
@@ -526,6 +526,6 @@ void BrainfuckCompiler::finalizeDebugInfo() {
     }
 }
 
-void BrainfuckCompiler::reportError(const std::string& message) {
-    std::cerr << "Error: " << message << std::endl;
+void BrainfuckCompiler::reportError(std::string_view message) {
+    std::cerr << "Error: " << std::string(message) << std::endl;
 }
