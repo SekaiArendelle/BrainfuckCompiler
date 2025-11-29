@@ -172,28 +172,29 @@ void BrainfuckCompiler::allocateMemory() {
 
     m_memoryArray = m_builder->CreateAlloca(memoryArrayType, nullptr, "memory");
 
-    // Initialize memory to 0
+    // Initialize memory to 0 using memset
     llvm::Value* zero = llvm::ConstantInt::get(llvm::Type::getInt8Ty(*m_context), 0);
-
-    // Use memset to initialize memory
-    llvm::Function* memsetFunc = llvm::Intrinsic::getOrInsertDeclaration(
-        m_module.get(), llvm::Intrinsic::memset, {m_memoryArray->getType(), llvm::Type::getInt8Ty(*m_context)});
-
     llvm::Value* size = llvm::ConstantInt::get(llvm::Type::getInt64Ty(*m_context), m_memorySize);
     llvm::Value* volatileFlag = llvm::ConstantInt::get(llvm::Type::getInt1Ty(*m_context), false);
 
-    m_builder->CreateCall(memsetFunc, {m_builder->CreateBitCast(m_memoryArray, llvm::Type::getInt8Ty(*m_context)), zero,
-                                       size, volatileFlag});
+    // Get the memset intrinsic with correct types
+    llvm::Function* memsetFunc = llvm::Intrinsic::getOrInsertDeclaration(
+        m_module.get(), llvm::Intrinsic::memset,
+        {llvm::PointerType::get(*m_context, 0), llvm::Type::getInt8Ty(*m_context), llvm::Type::getInt64Ty(*m_context)});
+
+    // Create a pointer to the first element of the array
+    llvm::Value* firstElementPtr = m_builder->CreatePointerCast(m_memoryArray, llvm::PointerType::get(*m_context, 0));
+
+    m_builder->CreateCall(memsetFunc, {firstElementPtr, zero, size, volatileFlag});
 
     // Allocate data pointer: int8_t* dataPtr = &memory[memorySize/2]
-    m_dataPtr = m_builder->CreateAlloca(llvm::Type::getInt8Ty(*m_context), nullptr, "dataptr");
+    m_dataPtr = m_builder->CreateAlloca(llvm::PointerType::get(*m_context, 0), nullptr, "dataptr");
 
     // Initialize pointer to middle of memory
     llvm::Value* indices[] = {llvm::ConstantInt::get(llvm::Type::getInt32Ty(*m_context), 0),
                               llvm::ConstantInt::get(llvm::Type::getInt32Ty(*m_context), m_memorySize / 2)};
 
-    llvm::Value* initialPtr =
-        m_builder->CreateInBoundsGEP(m_builder->getInt8Ty(), m_memoryArray, indices, "initial_ptr");
+    llvm::Value* initialPtr = m_builder->CreateInBoundsGEP(memoryArrayType, m_memoryArray, indices, "initial_ptr");
 
     m_builder->CreateStore(initialPtr, m_dataPtr);
 }
@@ -262,8 +263,7 @@ void BrainfuckCompiler::generateIR(std::string_view source) {
 
 void BrainfuckCompiler::handleIncrementPtr() {
     // Load current pointer value
-    llvm::Value* currentPtr =
-        m_builder->CreateLoad(llvm::Type::getInt8Ty(m_builder->getContext()), m_dataPtr, "current_ptr");
+    llvm::Value* currentPtr = m_builder->CreateLoad(llvm::PointerType::get(*m_context, 0), m_dataPtr, "current_ptr");
 
     // Pointer increment
     llvm::Value* newPtr = m_builder->CreateConstGEP1_32(llvm::Type::getInt8Ty(*m_context), currentPtr, 1, "ptr_inc");
@@ -274,8 +274,7 @@ void BrainfuckCompiler::handleIncrementPtr() {
 
 void BrainfuckCompiler::handleDecrementPtr() {
     // Load current pointer value
-    llvm::Value* currentPtr =
-        m_builder->CreateLoad(llvm::Type::getInt8Ty(m_builder->getContext()), m_dataPtr, "current_ptr");
+    llvm::Value* currentPtr = m_builder->CreateLoad(llvm::PointerType::get(*m_context, 0), m_dataPtr, "current_ptr");
 
     // Pointer decrement
     llvm::Value* newPtr = m_builder->CreateConstGEP1_32(llvm::Type::getInt8Ty(*m_context), currentPtr, -1, "ptr_dec");
@@ -286,12 +285,10 @@ void BrainfuckCompiler::handleDecrementPtr() {
 
 void BrainfuckCompiler::handleIncrementByte() {
     // Load current pointer
-    llvm::Value* currentPtr =
-        m_builder->CreateLoad(llvm::Type::getInt8Ty(m_builder->getContext()), m_dataPtr, "current_ptr");
+    llvm::Value* currentPtr = m_builder->CreateLoad(llvm::PointerType::get(*m_context, 0), m_dataPtr, "current_ptr");
 
     // Load current byte value
-    llvm::Value* currentValue =
-        m_builder->CreateLoad(llvm::Type::getInt8Ty(m_builder->getContext()), currentPtr, "current_val");
+    llvm::Value* currentValue = m_builder->CreateLoad(llvm::Type::getInt8Ty(*m_context), currentPtr, "current_val");
 
     // Byte value increment (8-bit unsigned addition)
     llvm::Value* newValue =
@@ -306,12 +303,10 @@ void BrainfuckCompiler::handleIncrementByte() {
 
 void BrainfuckCompiler::handleDecrementByte() {
     // Load current pointer
-    llvm::Value* currentPtr =
-        m_builder->CreateLoad(llvm::Type::getInt8Ty(m_builder->getContext()), m_dataPtr, "current_ptr");
+    llvm::Value* currentPtr = m_builder->CreateLoad(llvm::PointerType::get(*m_context, 0), m_dataPtr, "current_ptr");
 
     // Load current byte value
-    llvm::Value* currentValue =
-        m_builder->CreateLoad(llvm::Type::getInt8Ty(m_builder->getContext()), currentPtr, "current_val");
+    llvm::Value* currentValue = m_builder->CreateLoad(llvm::Type::getInt8Ty(*m_context), currentPtr, "current_val");
 
     // Byte value decrement (8-bit unsigned subtraction)
     llvm::Value* newValue =
@@ -326,12 +321,10 @@ void BrainfuckCompiler::handleDecrementByte() {
 
 void BrainfuckCompiler::handleOutput() {
     // Load current pointer
-    llvm::Value* currentPtr =
-        m_builder->CreateLoad(llvm::Type::getInt8Ty(m_builder->getContext()), m_dataPtr, "current_ptr");
+    llvm::Value* currentPtr = m_builder->CreateLoad(llvm::PointerType::get(*m_context, 0), m_dataPtr, "current_ptr");
 
     // Load current byte value
-    llvm::Value* currentValue =
-        m_builder->CreateLoad(llvm::Type::getInt8Ty(m_builder->getContext()), currentPtr, "output_val");
+    llvm::Value* currentValue = m_builder->CreateLoad(llvm::Type::getInt8Ty(*m_context), currentPtr, "output_val");
 
     // Zero extend to 32-bit (putchar needs int parameter)
     llvm::Value* extendedValue = m_builder->CreateZExt(currentValue, llvm::Type::getInt32Ty(*m_context), "output_int");
@@ -348,8 +341,7 @@ void BrainfuckCompiler::handleInput() {
     llvm::Value* truncatedValue = m_builder->CreateTrunc(inputValue, llvm::Type::getInt8Ty(*m_context), "input_byte");
 
     // Load current pointer
-    llvm::Value* currentPtr =
-        m_builder->CreateLoad(llvm::Type::getInt8Ty(m_builder->getContext()), m_dataPtr, "current_ptr");
+    llvm::Value* currentPtr = m_builder->CreateLoad(llvm::PointerType::get(*m_context, 0), m_dataPtr, "current_ptr");
 
     // Store input value
     m_builder->CreateStore(truncatedValue, currentPtr);
@@ -372,10 +364,8 @@ void BrainfuckCompiler::handleLoopStart(size_t ip) {
     m_builder->SetInsertPoint(loopHeader);
 
     // Load current byte value
-    llvm::Value* currentPtr =
-        m_builder->CreateLoad(llvm::Type::getInt8Ty(m_builder->getContext()), m_dataPtr, "current_ptr");
-    llvm::Value* currentValue =
-        m_builder->CreateLoad(llvm::Type::getInt8Ty(m_builder->getContext()), currentPtr, "loop_val");
+    llvm::Value* currentPtr = m_builder->CreateLoad(llvm::PointerType::get(*m_context, 0), m_dataPtr, "current_ptr");
+    llvm::Value* currentValue = m_builder->CreateLoad(llvm::Type::getInt8Ty(*m_context), currentPtr, "loop_val");
 
     // Compare value to 0
     llvm::Value* zero = llvm::ConstantInt::get(llvm::Type::getInt8Ty(*m_context), 0);
