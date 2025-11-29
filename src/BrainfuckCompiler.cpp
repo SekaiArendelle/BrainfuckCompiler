@@ -175,17 +175,9 @@ void BrainfuckCompiler::allocateMemory() {
     // Initialize memory to 0 using memset
     llvm::Value* zero = llvm::ConstantInt::get(llvm::Type::getInt8Ty(*m_context), 0);
     llvm::Value* size = llvm::ConstantInt::get(llvm::Type::getInt64Ty(*m_context), m_memorySize);
-    llvm::Value* volatileFlag = llvm::ConstantInt::get(llvm::Type::getInt1Ty(*m_context), false);
 
-    // Get the memset intrinsic with correct types
-    llvm::Function* memsetFunc = llvm::Intrinsic::getOrInsertDeclaration(
-        m_module.get(), llvm::Intrinsic::memset,
-        {llvm::PointerType::get(*m_context, 0), llvm::Type::getInt8Ty(*m_context), llvm::Type::getInt64Ty(*m_context)});
-
-    // Create a pointer to the first element of the array
-    llvm::Value* firstElementPtr = m_builder->CreatePointerCast(m_memoryArray, llvm::PointerType::get(*m_context, 0));
-
-    m_builder->CreateCall(memsetFunc, {firstElementPtr, zero, size, volatileFlag});
+    // Use IRBuilder's CreateMemSet which handles the intrinsic correctly
+    m_builder->CreateMemSet(m_memoryArray, zero, size, llvm::MaybeAlign(1), false);
 
     // Allocate data pointer: int8_t* dataPtr = &memory[memorySize/2]
     m_dataPtr = m_builder->CreateAlloca(llvm::PointerType::get(*m_context, 0), nullptr, "dataptr");
