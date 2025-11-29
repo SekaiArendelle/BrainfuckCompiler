@@ -1,6 +1,6 @@
 # Brainfuck LLVM 编译器
 
-一个功能完整的Brainfuck语言编译器，使用LLVM作为后端生成原生机器码。
+一个功能完整的Brainfuck语言编译器，使用LLVM作为后端生成原生机器码。仅用于学习编译原理与LLVM。
 
 ## 特性
 
@@ -13,64 +13,18 @@
 - ✅ 可配置内存大小
 - ✅ 跨平台支持
 
-## 项目结构
-
-```
-BrainfuckCompiler/
-├── include/
-│   └── BrainfuckCompiler.h    # 编译器头文件
-├── src/
-│   ├── BrainfuckCompiler.cpp  # 编译器实现
-│   └── main.cpp              # 命令行接口
-├── examples/                  # 示例程序
-│   ├── hello.bf              # Hello World
-│   ├── cat.bf                # 文件复制
-│   ├── add.bf                # 加法运算
-│   └── counter.bf            # 计数器
-├── CMakeLists.txt            # 构建配置
-└── README.md                 # 文档
-```
-
 ## 构建要求
 
 - C++17兼容的编译器
-- LLVM 14+ 开发包
-- CMake 3.10+
-
-### Ubuntu/Debian
-
-```bash
-sudo apt-get install llvm-14-dev clang cmake build-essential
-```
-
-### macOS
-
-```bash
-brew install llvm@14 cmake
-```
+- LLVM 21 开发包
+- CMake
 
 ## 构建步骤
 
-1. 克隆项目
 ```bash
-git clone <repository-url>
-cd BrainfuckCompiler
-```
-
-2. 创建构建目录
-```bash
-mkdir build
-cd build
-```
-
-3. 配置CMake
-```bash
-cmake .. -DCMAKE_BUILD_TYPE=Release
-```
-
-4. 编译
-```bash
-make -j$(nproc)
+cmake -S . -B build # Optional args: -GNinja -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_EXE_LINKER_FLAGS="-fuse-ld=lld"
+cmake --build build
+cmake --install build --prefix x86_64-linux-gnu-bfc-debug
 ```
 
 ## 使用方法
@@ -245,14 +199,6 @@ gdb ./hello
 2. 在实现文件中添加功能
 3. 更新命令行接口
 4. 添加测试用例
-
-## 许可证
-
-MIT License - 详见LICENSE文件
-
-## 贡献
-
-欢迎提交Issue和Pull Request！
 
 ## 致谢
 
