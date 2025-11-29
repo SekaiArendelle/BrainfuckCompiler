@@ -1,5 +1,4 @@
-#ifndef BRAINFUCK_COMPILER_H
-#define BRAINFUCK_COMPILER_H
+#pragma once
 
 #include <memory>
 #include <string>
@@ -132,5 +131,3 @@ private:
     // Source location tracking
     size_t m_currentIP; // Current instruction pointer
 };
-
-#endif // BRAINFUCK_COMPILER_H
