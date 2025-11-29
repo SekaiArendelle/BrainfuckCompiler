@@ -10,23 +10,34 @@
  * @brief Display usage help
  */
 void showUsage(const char* programName) {
-    std::cout << "Brainfuck LLVM Compiler" << std::endl;
-    std::cout << "Usage: " << programName << " [options]" << std::endl;
-    std::cout << std::endl;
-    std::cout << "Options:" << std::endl;
-    std::cout << "  -i, --input <file>     Input Brainfuck source file" << std::endl;
-    std::cout << "  -o, --output <file>    Output executable filename" << std::endl;
-    std::cout << "  -m, --memory <size>    Memory size (default: 30000)" << std::endl;
-    std::cout << "  -O, --optimize         Enable optimization" << std::endl;
-    std::cout << "  -g, --debug            Generate debug info" << std::endl;
-    std::cout << "  -j, --jit              JIT mode direct execution" << std::endl;
-    std::cout << "  -s, --stats            Show compilation statistics" << std::endl;
-    std::cout << "  -h, --help             Show help information" << std::endl;
-    std::cout << std::endl;
-    std::cout << "Examples:" << std::endl;
-    std::cout << "  " << programName << " -i hello.bf -o hello" << std::endl;
-    std::cout << "  " << programName << " -i mandelbrot.bf -o mandelbrot -O -m 60000" << std::endl;
-    std::cout << "  " << programName << " -i test.bf -j -s" << std::endl;
+    // Null pointer check with local fallback
+    if (!programName) {
+        programName = "bf_compiler";
+    }
+
+    // Using raw string literal for cleaner formatting
+    std::cout << "Brainfuck LLVM Compiler\n"
+                 "Usage: "
+              << programName
+              << " [options]\n\n"
+                 "Options:\n"
+                 "  -i, --input <file>     Input Brainfuck source file\n"
+                 "  -o, --output <file>    Output executable filename\n"
+                 "  -m, --memory <size>    Memory size (default: 30000)\n"
+                 "  -O, --optimize         Enable optimization\n"
+                 "  -g, --debug            Generate debug info\n"
+                 "  -j, --jit              JIT mode direct execution\n"
+                 "  -s, --stats            Show compilation statistics\n"
+                 "  -h, --help             Show help information\n\n"
+                 "Examples:\n"
+                 "  "
+              << programName
+              << " -i hello.bf -o hello\n"
+                 "  "
+              << programName
+              << " -i mandelbrot.bf -o mandelbrot -O -m 60000\n"
+                 "  "
+              << programName << " -i test.bf -j -s\n";
 }
 
 /**

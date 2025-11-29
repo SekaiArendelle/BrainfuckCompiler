@@ -1,5 +1,6 @@
 
 **/venv/
 **/build/
+**/.vscode/
 
 **/.ninja_log
