@@ -42,15 +42,6 @@
 
 #include "BrainfuckCompiler.h"
 
-BrainfuckCompiler::BrainfuckCompiler(std::size_t memorySize)
-    : m_memorySize(memorySize),
-      m_enableOptimization(true),
-      m_enableDebugInfo(false),
-      m_currentIP(0) {
-    // Initialize LLVM
-    initializeLLVM();
-}
-
 BrainfuckCompiler::~BrainfuckCompiler() {
     // Clean up resources
     if (m_diBuilder) {

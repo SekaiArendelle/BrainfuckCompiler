@@ -31,7 +31,14 @@ public:
      * @brief Constructor
      * @param memorySize Memory size (default 30000 cells)
      */
-    explicit BrainfuckCompiler(std::size_t memorySize = 30000);
+    BrainfuckCompiler(std::size_t memorySize, bool enableOptimization)
+        : m_memorySize(memorySize),
+          m_enableOptimization(enableOptimization),
+          m_enableDebugInfo(false),
+          m_currentIP(0) {
+        // Initialize LLVM
+        initializeLLVM();
+    }
 
     /**
      * @brief Destructor
@@ -46,14 +53,6 @@ public:
      * @return Returns true if compilation successful
      */
     bool compile(std::string_view source, std::string_view outputFile, bool enableJIT = false);
-
-    /**
-     * @brief Enable/disable optimization
-     * @param enable Whether to enable optimization
-     */
-    void setOptimization(bool enable) {
-        m_enableOptimization = enable;
-    }
 
     /**
      * @brief Enable/disable debug information

@@ -159,10 +159,9 @@ int main(int argc, char* argv[]) {
         std::string sourceCode = readFile(options.inputFile);
 
         // Create compiler
-        BrainfuckCompiler compiler(options.memorySize);
+        BrainfuckCompiler compiler(options.memorySize, options.enableOptimization);
 
         // Set compilation options
-        compiler.setOptimization(options.enableOptimization);
         compiler.setDebugInfo(options.enableDebugInfo);
 
         // Compile
